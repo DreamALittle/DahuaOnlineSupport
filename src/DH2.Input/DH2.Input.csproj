@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.Input — 窗口枚举绑定 + 后台输入(Win32 P/Invoke)
+    - 实现属于 S2;M0-S1 仅交付项目骨架
+    - 引用方向:Input → Core(02 §3 单向)
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>DH2.Input</RootNamespace>
+    <AssemblyName>DH2.Input</AssemblyName>
+    <Description>DH2 执行层:窗口枚举、后台输入(PostMessage)</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
+  </ItemGroup>
+
+</Project>

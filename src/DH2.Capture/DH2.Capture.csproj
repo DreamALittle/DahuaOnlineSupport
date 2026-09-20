@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.Capture — 截屏层
+    - M0:GDI CopyFromScreen;M1a:Windows.Graphics.Capture(WGC)
+    - WgcCapture 在 M0 仅占位(构造抛 NotImplementedException)
+    - 实现属于 S2;M0-S1 仅交付项目骨架
+    - 引用方向:Capture → Core
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>DH2.Capture</RootNamespace>
+    <AssemblyName>DH2.Capture</AssemblyName>
+    <Description>DH2 截屏层:GDI(M0)/ WGC(M1a)</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DH2.App/DH2.App.csproj" />
+    <Project Path="src/DH2.Capture/DH2.Capture.csproj" />
+    <Project Path="src/DH2.Core/DH2.Core.csproj" />
+    <Project Path="src/DH2.Input/DH2.Input.csproj" />
+    <Project Path="src/DH2.Vision/DH2.Vision.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DH2.Tests/DH2.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/DH2.MockGame/DH2.MockGame.csproj" />
+  </Folder>
+</Solution>

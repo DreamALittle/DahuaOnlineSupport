@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.App — dh2ctl 控制台 CLI
+    - 控制台 Exe;退出码:0 成功 / 2 用法错误 / 3 配置或执行失败(技术设计 §6)
+    - M0-S1 仅交付骨架;CLI 子命令在 S2/S3/S4 渐进接入
+    - 引用方向:App → Core/Input/Capture/Vision(02 §3)
+    - DPI:app.manifest 声明 PerMonitorV2,避免 GDI 截屏与坐标被虚拟化
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DH2.App</RootNamespace>
+    <AssemblyName>dh2ctl</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Description>DH2 命令行控制入口(dh2ctl)</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
+    <ProjectReference Include="..\DH2.Input\DH2.Input.csproj" />
+    <ProjectReference Include="..\DH2.Capture\DH2.Capture.csproj" />
+    <ProjectReference Include="..\DH2.Vision\DH2.Vision.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.0.2" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+  </ItemGroup>
+
+</Project>

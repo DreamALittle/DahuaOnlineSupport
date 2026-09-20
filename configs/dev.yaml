@@ -1,0 +1,21 @@
+# DH2 dev 配置(M0 默认:MockGame 仿真环境)
+# 解析:DH2.Core.Config.DevConfig(YamlDotNet 绑定 + 启动校验)
+# 完整字段定义见 docs/iterations/M0/ITER-M0-技术设计.md §2.3 与 §8
+
+profile: mock_800x600
+
+targets:
+  - name: mock
+    titlePattern: '^DH2\.MockGame$'
+    # processName: 可选;M0 仅依赖 titlePattern 过滤 MockGame
+
+paths:
+  templates: templates
+  artifacts: artifacts
+
+matching:
+  defaultThreshold: 0.85
+
+input:
+  driver: background         # M0 仅实现 background;foreground 启动即报"未实现"
+  postClickDelayMs: 50
