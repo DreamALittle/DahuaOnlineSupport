@@ -55,8 +55,8 @@ public sealed record Rect(int X, int Y, int Width, int Height)
 public readonly record struct Point(int X, int Y);
 public readonly record struct Size(int Width, int Height);
 
-/// <summary>一帧截屏。Image 归调用方释放。</summary>
-public sealed record Frame(long Hwnd, DateTime Timestamp, Bitmap Image)
+/// <summary>一帧截屏。Image 归调用方释放。(S1 审核修订:类型 Bitmap→Mat,Core 不引 System.Drawing.Common,Bitmap↔Mat 在 Capture/Vision 边界用 BitmapConverter 转换)</summary>
+public sealed record Frame(long Hwnd, DateTime Timestamp, Mat Image)
 {
     public int Width => Image.Width;
     public int Height => Image.Height;
