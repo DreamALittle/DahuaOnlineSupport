@@ -23,18 +23,18 @@ public sealed class StateStore
 
     /// <summary>
     /// 立即原子覆写。phase 仅作枚举传入便于调用方表达意图;序列化为规范字符串。
+    /// 使用匿名对象序列化,避免对 MockStatePayload 强依赖(RJ-S1-04 后 Models 仅保留 MockPhase 枚举)。
     /// </summary>
     public void Write(MockPhase phase, int counter)
     {
-        var payload = new MockStatePayload
+        var payload = new
         {
-            State = PhaseToString(phase),
-            Counter = counter,
-            Ts = DateTime.UtcNow.ToString("o"),
+            state = PhaseToString(phase),
+            counter,
+            ts = DateTime.UtcNow.ToString("o"),
         };
 
-        // File.Replace 在目标不存在时抛;首次创建走 Move。
-        var json = JsonSerializer.Serialize(payload, StateJsonContext.Default.MockStatePayload);
+        var json = JsonSerializer.Serialize(payload);
         var tmp = _path + ".tmp";
 
         lock (_gate)
@@ -70,12 +70,4 @@ public sealed class StateStore
         MockPhase.Arrived => "Arrived",
         _ => "Idle",
     };
-}
-
-/// <summary>
-/// System.Text.Json 源生成上下文(技术设计 §4 编码规范:启用 AOT/性能优化)。
-/// </summary>
-[System.Text.Json.Serialization.JsonSerializable(typeof(MockStatePayload))]
-internal partial class StateJsonContext : System.Text.Json.Serialization.JsonSerializerContext
-{
 }

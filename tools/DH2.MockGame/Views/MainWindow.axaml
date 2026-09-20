@@ -6,13 +6,14 @@
         Title="DH2.MockGame"
         Background="#000000">
 
-    <!-- 100% 缩放下 DIP == 像素(技术设计 §10 陷阱#1),按 mock-layout.yaml 绝对定位 -->
+    <!-- RJ-S1-04:所有几何(X/Y/W/H)绑定到 ViewModel,后者来自 Core.MockLayoutConfig(mocks-layout.yaml) -->
     <Canvas>
 
-        <!-- 任务追踪栏(§7 表 taskbar) -->
-        <Border x:Name="TaskbarBorder"
-                Canvas.Left="16" Canvas.Top="16"
-                Width="320" Height="88"
+        <!-- 任务追踪栏 -->
+        <Border Canvas.Left="{Binding TaskbarX}"
+                Canvas.Top="{Binding TaskbarY}"
+                Width="{Binding TaskbarWidth}"
+                Height="{Binding TaskbarHeight}"
                 Background="#1E1E2E"
                 BorderBrush="#555555"
                 BorderThickness="2">
@@ -23,16 +24,18 @@
                        VerticalAlignment="Center" />
         </Border>
 
-        <!-- 状态文本(§7 表 status) -->
+        <!-- 状态文本(自适应宽高,仅左上角锚点) -->
         <TextBlock Text="{Binding StatusText}"
-                   Canvas.Left="16" Canvas.Top="116"
+                   Canvas.Left="{Binding StatusX}"
+                   Canvas.Top="{Binding StatusY}"
                    Foreground="#FFFFFF"
                    FontSize="18" />
 
-        <!-- 主按钮(§7 表 button) -->
-        <Button x:Name="MainButton"
-                Canvas.Left="16" Canvas.Top="180"
-                Width="140" Height="48"
+        <!-- 主按钮 -->
+        <Button Canvas.Left="{Binding ButtonX}"
+                Canvas.Top="{Binding ButtonY}"
+                Width="{Binding ButtonWidth}"
+                Height="{Binding ButtonHeight}"
                 Background="#2D5BFF"
                 Foreground="#FFFFFF"
                 FontSize="18"
