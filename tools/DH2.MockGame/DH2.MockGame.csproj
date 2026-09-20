@@ -35,7 +35,11 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.7" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.7" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- RJ-S1-04:MockGame 启动时读 configs/mock-layout.yaml 渲染,几何一律来自配置 -->
+    <ProjectReference Include="..\..\src\DH2.Core\DH2.Core.csproj" />
   </ItemGroup>
 
 </Project>
