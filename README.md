@@ -11,7 +11,7 @@
 | .NET SDK | **10.0.103 或更新 LTS**(`dotnet --version` 验证) |
 | 工作目录权限 | 与游戏客户端同权限级(避免 UIPI 静默丢消息,见 `docs/iterations/M0/ITER-M0-技术设计.md` §10.4) |
 | 显示缩放 | **100%**(M0 GDI 截屏与 PostMessage 坐标按 1 DIP = 1 px,非 100% 环境坐标误差不作为缺陷) |
-| DPI 感知 | Avalonia(MockGame)默认 PerMonitorV2;dh2ctl 通过 `app.manifest` 声明 |
+| DPI 感知 | Avalonia(MockGame)默认 PerMonitorV2;dh2ctl 通过 `app.manifest` 声明;**MockGame 双路日志坐标为应用逻辑坐标(DIP),非物理像素**(详见 §8) |
 
 > 安装 Avalonia 模板(首次构建 MockGame 前):
 > `dotnet new install Avalonia.Templates`
@@ -97,3 +97,23 @@ dotnet run --project tools/DH2.MockGame -c Release
 ## 7. NuGet 依赖版本
 
 锁定版本写入各项目 `csproj`;`dotnet restore` 自动解析。详见 `docs/iterations/M0/ITER-M0-技术设计.md` §1 表格。
+
+## 8. 日志坐标系说明(M0-S2 修订)
+
+**MockGame 双路日志(`%TEMP%\dh2-mockgame\messages.log`)记录的坐标为应用逻辑坐标(DIP,device-independent pixel),不是物理像素。**
+
+- **100% 显示缩放下**:1 DIP = 1 物理像素,日志坐标与肉眼所见像素一致
+- **非 100% 缩放下**(如 150%):Avalonia 以 DIP 记录窗口消息(`WM_LBUTTONDOWN` 等的 lParam),日志坐标 = 物理像素 ÷ DPI 缩放系数;**用户肉眼看到的"按钮中心"在物理像素空间,与日志坐标不等价**
+
+| 显示缩放 | 日志坐标 (DIP) | 物理像素 | 换算关系 |
+|---|---|---|---|
+| 100% | (86, 204) | (86, 204) | 1:1 |
+| 125% | (86, 204) | (108, 255) | 像素 = DIP × 1.25 |
+| 150% | (86, 204) | (129, 306) | 像素 = DIP × 1.5 |
+| 200% | (86, 204) | (172, 408) | 像素 = DIP × 2.0 |
+
+**含义**:
+- 解析日志或调试坐标偏差时,**始终以 DIP 为基准**;肉眼/截屏/PostMessage 注入需换算
+- L2 / IT-04 / e2e 用例判定"按钮中心 (86, 204) ±1px"——指 DIP 坐标空间
+- 测试设计 §2 / §10 前置"100% 缩放"是为简化此换算链路;非 100% 环境下需显式 DPI 校正
+- 该说明由架构师 S2 审核报告 §5 引入(M0-S2 150% 缩放代跑发现 raw 坐标被虚拟化 × 1.5)

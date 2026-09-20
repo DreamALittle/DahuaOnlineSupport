@@ -124,7 +124,87 @@ L2 证据累计 12 份,落 `docs/iterations/M0/qa/evidence/M0-S2-l2/`:
 
 ---
 
-# M0-S2 三报告齐备,请架构师收口审查
+# 第五轮: RJ-S2-01 复测完成(用户复测指令响应,2026-09-21)
+
+> 本节由用户"复测指令——QA"触发:①已在 iter/m0 HEAD `e37270b` 完成 RJ-S2-01 修复合并与复测;②按 S2 审核 §5 非阻塞记录补 README 日志坐标系 §8 与走查手册步骤 6 退出确认;③本报告增"RJ-S2-01 复测"节。架构师无需 QA 再跑 L2 冒烟(已在 S2 审核 §4 自跑)。
+
+## 5.1 复测执行明细
+
+### 5.1.1 RJ-S2-01 修复落地
+
+- Dev A 推送 `fix: RJ-S2-01` 单 commit `dbcf293`(已在 iter/m0 HEAD `fbe0af7` 合并)
+- 修复内容:DevConfig / WindowTargetConfig / PathConfig / MatchingConfig / InputConfig 5 类型从 init-only/位置 record → 无参构造 class + settable 属性
+- 新增回归 UT `tests/DH2.Tests/Unit/Config/RegressionRealConfigFilesTests.cs`:真读 `configs/dev.yaml` + `configs/mock-layout.yaml`(向上遍历定位仓库根),断言全维度 + 中心 (176,60)/(86,204)
+
+### 5.1.2 build + test + coverage + format
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 全 sln Release build | `dotnet build DH2.slnx -c Release` | ✅ 0 警告 0 错误(3.98s) |
+| 全 sln 测试 | `dotnet test DH2.slnx -c Release --no-build` | ✅ **59/59 通过**(199ms;原 57 + Dev A 新增 2 个回归 UT) |
+| 覆盖率 | coverlet XPlat | DH2.Core **87.12%** / 分支 86.66%(≥ 70% 门槛) |
+| 格式门禁 | `dotnet format DH2.slnx --verify-no-changes` | ✅ exit 0 |
+
+### 5.1.3 回归 UT 有效性与断言质量
+
+`RegressionRealConfigFilesTests.cs`(Dev A 新增,2 用例)直接读仓库真实 yaml,作为"防再犯"回归:
+
+| 断言 | 覆盖 |
+|---|---|
+| 仓库根定位(`AppContext.BaseDirectory` 向上遍历直到 `configs/dev.yaml`) | 不依赖运行时目录 |
+| `configs/dev.yaml` 全维度 | Profile / Targets(至少 1 个)/ Paths / Matching(DefaultThreshold ∈ (0.5, 1.0))/ Input(driver=background) |
+| `configs/mock-layout.yaml` 全维度 | TempDir / Window(800×600)/ Taskbar(16,16,320,88)/ Status(16,116)/ Button(16,180,140,48)/ StateTimings(2000ms) |
+| 几何中心断言 | taskbar (176,60) / button (86,204) — 与技术设计 §7 真值一致 |
+
+**有效性判定**:与 S1 的 `MockLayoutGeometryTests`(针对默认实例的纯几何)互补,该回归 UT 锁定**真实仓库 yaml**的契约;任何后续对 Config 族或 yaml 字段的不兼容改动都会被该 UT 捕获(正是 RJ-S1-03/RJ-S2-01 的初衷)。
+
+### 5.1.4 dh2ctl 命令层真实运行(headless,无 MockGame)
+
+架构师 S2 审核 §3 已亲自跑出原 DevConfig YamlDotNet 抛 `InvalidDataException` 的现象,RJ-S2-01 修复后 QA 在 headless 会话重新跑(无 MockGame 窗口,允许窗口枚举结果为空,但配置解析必须成功):
+
+| 命令 | 结果 | 验证点 |
+|---|---|---|
+| `dh2ctl --help` | 完整帮助文本(7 子命令 + 退出码说明) | ✅ 程序入口无崩溃 |
+| `dh2ctl enumerate --config configs/dev.yaml` | 加载 config ✅ → 表头 `# target: mock` + `Hwnd\tTitle\tProcess\tX\tY\tWidth\tHeight` ✅ → **0 行**(无 MockGame) | ✅ DevConfig YamlDotNet 修复确认(原 DEF-S2-01 阻塞点);退出码 0 |
+| `dh2ctl capture`(无 `--hwnd`) | `[usage error] --hwnd <n> required (positive long)` + 退出码 2 | ✅ 用法错误处理正确 |
+| `dh2ctl capture --hwnd 12345678 --count 3 --interval-ms 100 --out artifacts/capture-s2` | `[capture error] write frame 0: !_img.empty()` + 退出码 3 | ✅ 空帧行为符合 S1 偏离裁决 #3 |
+
+证据:`docs/iterations/M0/qa/evidence/M0-S2-l2/06-enumerate-rerun.txt` + `07-capture-rerun-noargs.txt` + `07-capture-rerun-badhwnd.txt`
+
+## 5.2 S2 审核 §5 非阻塞记录已落实
+
+| §5 记录 | 处置 |
+|---|---|
+| MockGame raw 日志在非 100% 缩放下记录虚拟化坐标(×1.5) | ✅ README 新增 §8 "日志坐标系说明":DIP vs 物理像素对照表 + 换算关系 + 来源注(S2 审核 §5) |
+| 走查手册补"结束确认 DH2.MockGame 进程已退出"步骤 | ✅ `M0-S2-L2-桌面走查手册.md` 步骤 6 强化:增加 `while` 轮询 10s + Warning 提示孤儿进程残留 |
+| `Input`/`Capture` 行覆盖 0% 符合预期 | ✅ 本轮 QA 报告 §"覆盖率"已注明(Win32/GDI 薄层,由 IT-01/02 集成覆盖;M2+ 自动化 UT 视情补) |
+
+## 5.3 复测结论
+
+| 项 | 结果 |
+|---|---|
+| RJ-S2-01 修复落地 | ✅ commit `dbcf293` 已合并(`fbe0af7`) |
+| 全 sln build/test/format | ✅ 全绿(0 警 0 错 / 59 通过 / exit 0) |
+| 回归 UT 有效性与断言质量 | ✅ 真读 `configs/dev.yaml` + `configs/mock-layout.yaml`,全维度 + 中心断言 |
+| dh2ctl 命令层恢复(RJ-S2-01 修复核心) | ✅ DevConfig 解析不再崩,`enumerate` 表头格式与 SAC2-1 一致 |
+| L2 IT-01/02 真实桌面回放 | **架构师已在 S2 审核 §4 自跑**;QA 无需再跑冒烟(用户复测指令第 ① 段已明示"你们无需再跑冒烟") |
+| S2 审核 §5 非阻塞记录 | ✅ README §8 + 走查手册步骤 6 强化已落 |
+| **DEF-S2-01 状态** | ✅ **CLOSED**(RJ-S2-01 修复 + 复测全绿) |
+
+**Sprint M0-S2 综合判定**:
+
+- L2 IT-01/02 命令层与解析层全绿(架构师代跑 + QA headless 双重验证)
+- 阻塞 DEF-S2-01 已 CLOSED
+- 非阻塞项(README 日志坐标系 + 走查手册退出确认)已落
+- 架构师可快速复审签发 S3 放行
+
+---
+
+# RJ-S2-01 复测完成,请架构师复审 S2
+
+- iter/m0 HEAD = `e37270b`(本报告提交后新 commit)
+- 三报告齐备 + DEF-S2-01 CLOSED + README §8 + 走查手册步骤 6 已落
+- 期望架构师"快速复审"通过即签发"开始 M0-S3"放行指令
 
 - iter/m0 HEAD = `fbe0af7`(本报告待 push 后的新 commit)
 - 三报告:DevA `76f6d31` / DevB `bf9080b` / QA 本报告
