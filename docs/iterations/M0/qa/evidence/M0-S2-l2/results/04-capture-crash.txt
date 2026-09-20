@@ -1,0 +1,15 @@
+DEF-S2-02 证据(架构师 2026-09-21 复审实测)
+=== 复现 1:capture --hwnd <真实句柄> --count 2 ===
+Fatal error.
+0xC0000005
+   at OpenCvSharp.Internal.NativeMethods.core_Mat_cols(IntPtr, Int32 ByRef)
+   at OpenCvSharp.Mat.get_Cols()
+   at OpenCvSharp.Mat.get_Width()
+   at DH2.Core.Models.Frame.get_Width()
+   at DH2.App.Commands.CaptureCommand.Execute(...)
+   at DH2.App.Program.DispatchSubcommand(...)
+exit=-1073741819 (0xC0000005)
+=== 复现 2:capture --hwnd 0(用法错误路径)===
+输出: [usage error] --hwnd <n> required (positive long)
+exit=-1073741819 (0xC0000005,应为 2)
+=== 参考:enumerate 正常(exit=0) ===
