@@ -1,0 +1,16 @@
+# 强制统一 LF(Win 开发环境友好)
+* text=auto eol=lf
+
+# 二进制资产(金样本 / 模板 PNG)按二进制归档
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.bin binary
+
+# sln/csproj 按文本
+*.sln text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
