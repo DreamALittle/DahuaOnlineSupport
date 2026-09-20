@@ -117,12 +117,10 @@ public class DevConfigValidationTests
     }
 
     [Fact]
-    public void Validate_DriverForeground_AddsDriverError()
+    public void Validate_DriverForeground_AddsNotImplementedError()
     {
-        // 技术设计 §2.3:"配置为 foreground 时启动即报'未实现'错误"
-        // Dev A 当前实现:SupportedDrivers 只含 "background",foreground 触发
-        // "must be one of {background, foreground}" 分支(else-if 'not implemented' 不可达,
-        // 见 DEF-S1-02)。本测试接受任一错误消息——既满足 SAC1-2 "UT 全绿",又记录现状。
+        // RJ-S1-05 已修复:SupportedDrivers 现含 "foreground",else-if 分支可达,
+        // 消息严格化为技术设计 §2.3 要求的"foreground driver not implemented in M0; use 'background'"。
         var cfg = new DevConfig
         {
             Profile = "mock_800x600",
@@ -133,8 +131,8 @@ public class DevConfigValidationTests
         };
 
         var errors = ConfigValidator.Validate(cfg);
-        Assert.NotEmpty(errors);
-        Assert.Contains(errors, e => e.Path.Contains("Driver"));
+        Assert.Contains(errors, e => e.Path.Contains("Driver") &&
+            e.Message.Contains("not implemented") && e.Message.Contains("M0"));
     }
 
     [Fact]
