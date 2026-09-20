@@ -1,31 +1,39 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
     DH2.MockGame — 模拟游戏窗体(Avalonia)
-    - 窗口:800x600,Title="DH2.MockGame",CanResize=false,CenterScreen
-    - DPI:Avalonia 默认 PerMonitorV2
-    - 实现:由 Dev B 在 S1-3 实施(按 mock-layout.yaml 渲染 + 状态机 + 日志双路)
-    - M0-S1 仅交付项目骨架 + 最小 Avalonia App 可启动
-    - 引用方向:MockGame → Core(读取 MockLayoutConfig)
+    - 裁决 RJ-M0-S1 §2:全解决方案统一 Avalonia 11.2.x(Dev A 骨架为准)
+    - Dev B 原始实现用 12.1.2(技术设计偏离),RJ-S1-01 在本分支降级到 11.2.7
+    - MockGame 使用的 API(Window/Button/Pointer/Dispatcher)11 与 12 无破坏性差异
+    - 完整实现由 Dev B 维护(Models/Services/ViewModels/Views),见 iter/m0
   -->
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>DH2.MockGame</RootNamespace>
     <AssemblyName>DH2.MockGame</AssemblyName>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <Description>DH2 模拟游戏窗体(Avalonia,供无游戏环境开发与测试)</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DH2.Core\DH2.Core.csproj" />
+    <Folder Include="Models\" />
+    <Folder Include="Services\" />
+    <AvaloniaResource Include="Assets\**" />
+    <None Include="..\..\configs\mock-layout.yaml" Link="Configs\mock-layout.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.2.7" />
     <PackageReference Include="Avalonia.Desktop" Version="11.2.7" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.7" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.7" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 
 </Project>

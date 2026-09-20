@@ -27,9 +27,10 @@
 | 测试 Agent | D:\Repos\DH2-QA | `iter/m0`(集成;测试 Agent 与架构师可推送) |
 
 - 开发分支基于**最新 `origin/iter/m0`** 创建;开工前先 `git fetch` + rebase;
+- **分支权限(硬规则)**:`main` 的一切合并与推送**仅由架构师 Agent 执行**(迭代收尾、七项门禁通过后合入);任何开发/测试 Agent **不得向 `main` 推送**——越权推送按审核不通过处理。各分支允许推送者:`dev-a/m0-s{n}` 仅 Dev A;`dev-b/m0-s{n}` 仅 Dev B;`iter/m0` 为测试 Agent(集成)与架构师(审核报告等文档);
+- **工作区隔离(硬规则)**:四个工作区互不触碰——Dev A 只用 D:\Repos\DH2-DevA,Dev B 只用 D:\Repos\DH2-DevB,测试 Agent 只用 D:\Repos\DH2-QA,D:\Repos\DH2 仅架构师使用;在他人工作区内做任何 git 操作视为违规;
 - **滚动集成**:Story 完成即推送自己的 dev 分支;测试 Agent 随时将其合并进 `iter/m0` 并跑构建冒烟;
-- 冲突处理:项目文件类机械冲突(sln/csproj)QA 可自行解决并记录;逻辑冲突退回对应开发处理;
-- `main` 只在迭代收尾、七项门禁通过后合入(架构师执行)。
+- 冲突处理:项目文件类机械冲突(sln/csproj)QA 可自行解决并记录;逻辑冲突退回对应开发处理。
 
 ## 3. 节奏与粒度
 

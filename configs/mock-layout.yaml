@@ -1,35 +1,52 @@
-# MockGame 单一真源布局配置(M0 §7/§8)
-# 解析:DH2.Core.Config.MockLayoutConfig
-# 坐标原点为客户区左上角(0,0),单位像素(@100% 缩放 = DIP)
+# DH2.MockGame 布局与运行时参数(单一真源,程序启动时读取)
+# 像素坐标系:100% 缩放下 DIP == 像素(技术设计 §10 陷阱#1,#2)
+# 颜色格式:#RRGGBB
+# 时间单位:毫秒(ms)
 
-profile: mock_800x600
+tempDir: "%TEMP%/dh2-mockgame"   # 展开为 Environment.ExpandEnvironmentVariables
 
 window:
+  title: "DH2.MockGame"
   width: 800
   height: 600
 
-# 任务追踪栏(底 #1E1E2E,边框 2px #555555,白字 20px:`师门任务 ({n}/20)`)
 taskbar:
   x: 16
   y: 16
   width: 320
   height: 88
+  background: "#1E1E2E"
+  borderColor: "#555555"
+  borderThickness: 2
+  textColor: "#FFFFFF"
+  fontSize: 20
+  # 状态文本模板(占位符 {n} = 任务计数,Idle/Arrived 显示;Pathfinding 不显示此模板)
+  textTemplate: "师门任务 ({n}/20)"
 
-# 状态文本(白字 18px;左对齐,自适应宽高)
 status:
   x: 16
   y: 116
+  textColor: "#FFFFFF"
+  fontSize: 18
+  # Pathfinding 时显示"寻路中...",Arrived 显示"已到达目的地",Idle 显示"待机"
+  texts:
+    idle: "待机"
+    pathfinding: "寻路中..."
+    arrived: "已到达目的地"
 
-# 主按钮(底 #2D5BFF,白字:`前往`/`返回`)
 button:
   x: 16
   y: 180
   width: 140
   height: 48
+  background: "#2D5BFF"
+  textColor: "#FFFFFF"
+  fontSize: 18
+  # 初始(Idle)显示"前往";点击进入 Pathfinding 期间禁用;Arrived 后显示"返回"
+  texts:
+    go: "前往"
+    return: "返回"
 
-# 状态机计时(技术设计 §7)
+# 状态机时序(Pathfinding 持续时间,ms)
 stateTimings:
-  pathfindingMs: 2000        # Idle → Pathfinding 持续时间 → Arrived
-
-# 临时目录(可含 %TEMP%/其它环境变量;由 MockGame 启动时展开)
-tempDir: "%TEMP%/dh2-mockgame"
+  pathfindingMs: 2000
