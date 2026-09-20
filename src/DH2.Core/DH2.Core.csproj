@@ -5,6 +5,7 @@
     - 不引用任何项目(02 §3 强制单向;Core 是叶子)
     - 允许引用 OpenCvSharp4(仅类型层依赖,如 Mat 用作契约;不承载算法)
     - 引用 YamlDotNet 用于配置绑定(§2.3)
+    - M0-S2:启用 Directory.Packages.props 后 PackageReference 不再写 Version
   -->
 
   <PropertyGroup>
@@ -14,8 +15,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241107" />
-    <PackageReference Include="YamlDotNet" Version="16.1.1" />
+    <PackageReference Include="OpenCvSharp4" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
 </Project>

@@ -3,9 +3,8 @@
   <!--
     DH2.MockGame — 模拟游戏窗体(Avalonia)
     - 裁决 RJ-M0-S1 §2:全解决方案统一 Avalonia 11.2.x(Dev A 骨架为准)
-    - Dev B 原始实现用 12.1.2(技术设计偏离),RJ-S1-01 在本分支降级到 11.2.7
-    - MockGame 使用的 API(Window/Button/Pointer/Dispatcher)11 与 12 无破坏性差异
     - 完整实现由 Dev B 维护(Models/Services/ViewModels/Views),见 iter/m0
+    - M0-S2:启用 Directory.Packages.props 后 PackageReference 不再写 Version
   -->
 
   <PropertyGroup>
@@ -18,8 +17,6 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>DH2.MockGame</RootNamespace>
     <AssemblyName>DH2.MockGame</AssemblyName>
-    <!-- NU1903: Avalonia 11 间接依赖 Tmds.DBus.Protocol 0.20.0(Linux DBus),Windows 不运行时不受影响;已知漏洞 Linux 平台,DH2 项目运行环境为 Windows,故抑制 -->
-    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,12 +27,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.2.7" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.2.7" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.7" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.7" />
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
 </Project>

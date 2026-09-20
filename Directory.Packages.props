@@ -1,0 +1,46 @@
+<!--
+  DH2 解决方案集中包版本管理(Central Package Management)
+  - 启用后所有 csproj 中 PackageReference 不得再写 Version(否则 NU1008 警告)
+  - M0-S2 引入:解决 DH2.Core(16.1.1)与 DH2.MockGame(16.3.0)YamlDotNet 版本分裂(RJ-S1-03)
+  - 新增共享包请在 <ItemGroup><PackageVersion /> 处登记;各项目按需 <PackageReference Include="..." />
+-->
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 配置 / YAML -->
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+
+    <!-- 视觉 / OpenCv(类型层 + 运行时) -->
+    <PackageVersion Include="OpenCvSharp4" Version="4.10.0.20241107" />
+    <PackageVersion Include="OpenCvSharp4.runtime.win" Version="4.10.0.20241107" />
+
+    <!-- 图像 / GDI -->
+    <PackageVersion Include="System.Drawing.Common" Version="8.0.0" />
+
+    <!-- 日志 -->
+    <PackageVersion Include="Serilog" Version="4.0.2" />
+    <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="6.0.0" />
+
+    <!-- Avalonia 全栈(裁决 RJ-M0-S1:全解决方案统一 11.2.x) -->
+    <PackageVersion Include="Avalonia" Version="11.2.7" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.2.7" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.2.7" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.7" />
+
+    <!-- MVVM -->
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+
+    <!-- 测试 -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+  </ItemGroup>
+
+</Project>

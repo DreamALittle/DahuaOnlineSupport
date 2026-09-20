@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
-    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <PackageReference Include="System.Drawing.Common" />
   </ItemGroup>
 
 </Project>
