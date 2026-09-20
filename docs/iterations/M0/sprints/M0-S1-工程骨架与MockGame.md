@@ -28,10 +28,14 @@
 - 任何 Win32 窗口枚举/截屏实现(S2);模板匹配/manifest 加载实现(S3);PostMessage 点击/CLI 命令/e2e(S4)
 - NativeMethods 中声明而未用的占位 API 允许,但不得编写调用逻辑
 
-## Sprint 简报(开发 Agent 填写后,本卡附链接)
+## 轮次完成报告(各角色填写,收口材料)
 
-(链接到本目录 M0-S1-Sprint简报.md)
+- Dev A → `../reports/M0-S1-DevA-任务完成报告.md`
+- Dev B → `../reports/M0-S1-DevB-任务完成报告.md`
+- QA → `../reports/M0-S1-QA-任务完成报告.md`(含集成记录/用例矩阵/覆盖率/DEF/资产/结论)
+
+三份齐备并全部进入 iter/m0 后,架构师才启动集中审查。
 
 ## 审核记录(架构师填写)
 
-(待 Sprint Review)
+(结论与整改项见 `../reports/M0-S1-架构师审核报告.md`;通过后由架构师签发下一轮放行指令,未收到放行指令不得开始下一 Sprint)
