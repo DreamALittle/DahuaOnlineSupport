@@ -1,5 +1,6 @@
 using System.Text;
 using DH2.App.Cli;
+using DH2.App.Commands;
 using DH2.App.Logging;
 using DH2.Core.Config;
 using Serilog;
@@ -105,23 +106,38 @@ internal static class Program
     }
 
     /// <summary>
-    /// 子命令派发。M0-S2 骨架仅占位:S2-4 / S3 / S4 命令尚未实现时返回退出码 2。
+    /// 子命令派发。S2-4 已接入 enumerate + capture(消费 Dev B 的 IWindowLocator / IFrameCapture);
+    /// S3 / S4 子命令在本轮仍未实现时返回退出码 2。
     /// </summary>
     private static int DispatchSubcommand(ParsedCommand parsed, DevConfig config)
     {
         var sub = parsed.Subcommand!;
-        switch (sub)
-        {
-            case "enumerate":
-            case "capture":
-                // S2-4 由 Dev A 在 dev-a/m0-s2 后续提交接入;本轮仅骨架 → 提示并退出 2。
-                Console.Error.WriteLine($"[not implemented] '{sub}' arrives in S2-4.");
-                return (int)ExitCode.UsageError;
+        var options = parsed.Options;
+        var ct = CancellationToken.None;
 
-            default:
-                Console.Error.WriteLine($"[usage error] unknown subcommand '{sub}'");
-                PrintUsage();
-                return (int)ExitCode.UsageError;
+        IDh2Command? command = sub switch
+        {
+            "enumerate" => new EnumerateCommand(),
+            "capture" => new CaptureCommand(),
+            _ => null,
+        };
+
+        if (command is null)
+        {
+            // S3 / S4 子命令(save-template / match / click / e2e / report)尚未接入
+            Console.Error.WriteLine($"[not implemented] '{sub}' arrives in S3 or S4.");
+            PrintUsage();
+            return (int)ExitCode.UsageError;
+        }
+
+        try
+        {
+            return command.Execute(config, options, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            Console.Error.WriteLine($"[cancelled] {sub} cancelled by user");
+            return (int)ExitCode.Success;
         }
     }
 
@@ -129,8 +145,8 @@ internal static class Program
     {
         Console.Error.WriteLine($"Usage: {ToolName} <subcommand> [--config <path>] [--key value]...");
         Console.Error.WriteLine("Subcommands:");
-        Console.Error.WriteLine("  enumerate    list windows matching config (S2-4)");
-        Console.Error.WriteLine("  capture      capture N frames of a window (S2-4)");
+        Console.Error.WriteLine("  enumerate    list windows matching config            [S2-4 ✓]");
+        Console.Error.WriteLine("  capture      capture N frames of a window            [S2-4 ✓]");
         Console.Error.WriteLine("  save-template (S3)");
         Console.Error.WriteLine("  match         (S3)");
         Console.Error.WriteLine("  click         (S4)");
@@ -149,8 +165,8 @@ internal static class Program
         sb.AppendLine($"  {ToolName} <subcommand> [--config <path>] [--key value]...");
         sb.AppendLine();
         sb.AppendLine("Subcommands (Sprint 节奏渐进接入):");
-        sb.AppendLine("  enumerate       列出匹配 dev.yaml 的目标窗口              [S2-4]");
-        sb.AppendLine("  capture         连续截屏指定窗口客户区                  [S2-4]");
+        sb.AppendLine("  enumerate       列出匹配 dev.yaml 的目标窗口              [S2-4 ✓]");
+        sb.AppendLine("  capture         连续截屏指定窗口客户区                  [S2-4 ✓]");
         sb.AppendLine("  save-template   截屏并登记为模板                         [S3]");
         sb.AppendLine("  match           在新截屏上定位已登记模板                  [S3]");
         sb.AppendLine("  click           后台 PostMessage 点击客户区坐标          [S4]");
