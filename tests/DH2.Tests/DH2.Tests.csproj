@@ -11,6 +11,12 @@
     <RootNamespace>DH2.Tests</RootNamespace>
     <AssemblyName>DH2.Tests</AssemblyName>
     <IsTestProject>true</IsTestProject>
+    <!--
+      测试代码关闭 GenerateDocumentationFile:测试非库代码,无需 XML 文档,
+      否则开启后将因缺 /// 注释触发 TreatWarningsAsErrors(Directory.Build.props)
+      而无法 build。生产项目保持 true 不变。
+    -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <Description>DH2 xUnit 测试工程(L1 单测 + L2 模拟窗口测试,测试 Agent 维护)</Description>
   </PropertyGroup>
 
