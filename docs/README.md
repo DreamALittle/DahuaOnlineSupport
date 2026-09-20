@@ -38,3 +38,4 @@
 | 2026-09-20 | 建立远端仓库 DahuaOnlineSupport;开发流程改为"开发 Agent 先 clone 再开发"(替代 git init) | 定稿 |
 | 2026-09-20 | TFM 调整为 net10.0-windows(本机 SDK 10.0.103;.NET 8 于 2026-11 EOL) | 定稿 |
 | 2026-09-20 | 开发执行采用 Scrum Sprint 制:一次只发一个 Sprint,Sprint Review 通过才发下一个;M0 拆为 S1~S4 | 定稿 |
+| 2026-09-20 | 团队编制:Dev A(平台与CLI组)+ Dev B(模拟器与交互组)+ 测试 Agent(QA/集成),架构师一带三 | 定稿 |

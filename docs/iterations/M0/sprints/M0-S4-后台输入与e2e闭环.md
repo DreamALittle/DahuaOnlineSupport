@@ -8,12 +8,13 @@
 
 ## Stories
 
-| ID | Story | 技术设计引用 | 测试引用 |
-|----|-------|--------------|----------|
-| S4-1 | DH2.Input:PostMessageDriver(MOVE/DOWN/UP 序列、MK_LBUTTON、PostClickDelayMs)+ dh2ctl `click` 命令 | 技术设计 §3.3、§6 | IT-04、IT-07 |
-| S4-2 | dh2ctl `e2e --target mock`:EnsureIdle → 枚举 → 截屏 → 匹配任务栏 → 布局计算按钮中心 → 点击 → 状态轮询 → 二次截屏匹配 `mock_btn_return` → PASS/FAIL 与证据落盘 | 技术设计 §6.1 | IT-05、IT-06 |
-| S4-3 | dh2ctl `report --target game` 真机验证向导(分步提示 + 证据目录 `artifacts/m0-report/`);**仅实现向导,不执行真机验证** | 技术设计 §6 | 人工核对输出内容 |
-| S4-4 | 迭代收尾:`dotnet format --verify-no-changes`;覆盖率复核 ≥70%;填写 `ITER-M0-实施自检报告.md`(AC-01~AC-10 逐条,AC-09 标注"待用户执行");推送 `iter/m0` 至远端 | 任务书 §3/§4 | G3/G4 预演 |
+| ID | Story | 负责人 | 技术设计引用 | 测试引用 |
+|----|-------|--------|--------------|----------|
+| S4-1 | DH2.Input:PostMessageDriver(MOVE/DOWN/UP 序列、MK_LBUTTON、PostClickDelayMs) | Dev B | 技术设计 §3.3 | IT-04、IT-07 |
+| S4-2 | dh2ctl `click` 命令(消费 PostMessageDriver) | Dev A(依赖 S4-1) | 技术设计 §6 | IT-04、IT-07 |
+| S4-3 | dh2ctl `e2e --target mock`:EnsureIdle → 枚举 → 截屏 → 匹配任务栏 → 布局计算按钮中心 → 点击 → 状态轮询 → 二次截屏匹配 `mock_btn_return` → PASS/FAIL 与证据落盘 | Dev B(依赖 S4-1) | 技术设计 §6.1 | IT-05、IT-06 |
+| S4-4 | dh2ctl `report --target game` 真机验证向导(分步提示 + 证据目录 `artifacts/m0-report/`);**仅实现向导,不执行真机验证** | Dev A | 技术设计 §6 | 人工核对输出内容 |
+| S4-5 | 迭代收尾:`dotnet format --verify-no-changes`;汇总双开发简报与 QA 报告,填写 `ITER-M0-实施自检报告.md`(AC-01~AC-10 逐条,AC-09 标注"待用户执行") | Dev A(汇总)/ 测试 Agent(覆盖率与推送核对) | 任务书 §3/§4 | G3/G4 预演 |
 
 ## SAC(Sprint 验收标准,Review 逐条核对)
 
