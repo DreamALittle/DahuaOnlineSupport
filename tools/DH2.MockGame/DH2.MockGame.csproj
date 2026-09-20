@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.MockGame — 模拟游戏窗体(Avalonia)
+    - 窗口:800x600,Title="DH2.MockGame",CanResize=false,CenterScreen
+    - DPI:Avalonia 默认 PerMonitorV2
+    - 实现:由 Dev B 在 S1-3 实施(按 mock-layout.yaml 渲染 + 状态机 + 日志双路)
+    - M0-S1 仅交付项目骨架 + 最小 Avalonia App 可启动
+    - 引用方向:MockGame → Core(读取 MockLayoutConfig)
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>DH2.MockGame</RootNamespace>
+    <AssemblyName>DH2.MockGame</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <Description>DH2 模拟游戏窗体(Avalonia,供无游戏环境开发与测试)</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DH2.Core\DH2.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.7" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.7" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.7" />
+  </ItemGroup>
+
+</Project>

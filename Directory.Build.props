@@ -43,4 +43,14 @@
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
   </PropertyGroup>
 
+  <!--
+    NU1903(NuGet 漏洞咨询)全局抑制:
+    - 由 Avalonia 11.x 传递依赖 Tmds.DBus.Protocol 触发(GHSA-xrw6-gwf8-vvr9)
+    - 非本仓库代码可控;跟踪修复后移除此 NoWarn
+    - 详见 docs/iterations/M0/ITER-M0-技术设计.md §10(已知陷阱)
+  -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
+  </PropertyGroup>
+
 </Project>

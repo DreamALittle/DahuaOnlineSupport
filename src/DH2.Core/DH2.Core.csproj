@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.Core — 契约与纯逻辑层
+    - 不引用任何项目(02 §3 强制单向;Core 是叶子)
+    - 允许引用 OpenCvSharp4(仅类型层依赖,如 Mat 用作契约;不承载算法)
+    - 引用 YamlDotNet 用于配置绑定(§2.3)
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>DH2.Core</RootNamespace>
+    <AssemblyName>DH2.Core</AssemblyName>
+    <Description>DH2 核心契约:模型/接口/配置/纯逻辑工具</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241107" />
+    <PackageReference Include="YamlDotNet" Version="16.1.1" />
+  </ItemGroup>
+
+</Project>

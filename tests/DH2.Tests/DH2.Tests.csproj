@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.Tests — xUnit 测试工程
+    - 测试编码与用例(UT-01~08,IT-01~07)归 测试 Agent
+    - M0-S1 仅交付项目骨架,不含任何测试方法(测试 Agent 在各 Sprint 内补入)
+    - 引用全部 6 个产品项目(L1+L2 都需要触及全部契约)
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>DH2.Tests</RootNamespace>
+    <AssemblyName>DH2.Tests</AssemblyName>
+    <IsTestProject>true</IsTestProject>
+    <Description>DH2 xUnit 测试工程(L1 单测 + L2 模拟窗口测试,测试 Agent 维护)</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DH2.Core\DH2.Core.csproj" />
+    <ProjectReference Include="..\..\src\DH2.Input\DH2.Input.csproj" />
+    <ProjectReference Include="..\..\src\DH2.Capture\DH2.Capture.csproj" />
+    <ProjectReference Include="..\..\src\DH2.Vision\DH2.Vision.csproj" />
+    <ProjectReference Include="..\..\src\DH2.App\DH2.App.csproj" />
+    <ProjectReference Include="..\..\tools\DH2.MockGame\DH2.MockGame.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
