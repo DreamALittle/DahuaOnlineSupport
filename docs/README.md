@@ -14,12 +14,13 @@
 | 04 | [编码与工程规范](04-编码与工程规范.md) | C# 编码/异步/日志/配置/测试规范 | 开发只读 |
 | 05 | [总体测试策略](05-总体测试策略.md) | 四层测试体系、MockGame、金样本 | 开发只读 |
 | 06 | [开发路线图](06-开发路线图.md) | 里程碑与迭代分解 | 开发只读 |
+| 07 | [Scrum 开发流程](07-Scrum开发流程.md) | **Sprint/Story 执行细则:一次一个 Sprint、Story 卡与简报模板** | 开发只读 |
 
 ## 迭代任务包
 
 | 迭代 | 状态 | 文档 |
 |------|------|------|
-| M0 | **已发包,待开发 Agent 实施(clone 后开工)** | [任务书](iterations/M0/ITER-M0-任务书.md) · [技术设计](iterations/M0/ITER-M0-技术设计.md) · [测试设计](iterations/M0/ITER-M0-测试设计.md) |
+| M0 | **已发包:当前 Sprint = S1(clone 后开工,逐 Sprint 推进)** | [任务书](iterations/M0/ITER-M0-任务书.md) · [技术设计](iterations/M0/ITER-M0-技术设计.md) · [测试设计](iterations/M0/ITER-M0-测试设计.md) · [Sprint 卡](iterations/M0/sprints/) |
 | M1a~M4b | 未发包 | 前序审核通过后由架构师发包 |
 
 ## 工作循环(摘要,详见 03 文档)
@@ -36,3 +37,4 @@
 | 2026-09-20 | UI 框架统一为 Avalonia 11,用于 MockGame/Annotator/监控台(替代 WPF 方案) | 定稿 |
 | 2026-09-20 | 建立远端仓库 DahuaOnlineSupport;开发流程改为"开发 Agent 先 clone 再开发"(替代 git init) | 定稿 |
 | 2026-09-20 | TFM 调整为 net10.0-windows(本机 SDK 10.0.103;.NET 8 于 2026-11 EOL) | 定稿 |
+| 2026-09-20 | 开发执行采用 Scrum Sprint 制:一次只发一个 Sprint,Sprint Review 通过才发下一个;M0 拆为 S1~S4 | 定稿 |
