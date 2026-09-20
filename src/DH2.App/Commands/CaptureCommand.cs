@@ -16,7 +16,14 @@ namespace DH2.App.Commands;
 ///   <item>参数:--hwnd &lt;n&gt; / --count &lt;10&gt; / --interval-ms &lt;500&gt; / --out &lt;dir&gt;。</item>
 ///   <item>输出:每帧 PNG 文件名 <c>frame_{yyyyMMddHHmmssfff}_{i}.png</c> 落到 <c>--out</c>(默认 <c>artifacts/capture-{ts}</c>)。</item>
 ///   <item>结束打印均值 / p95 耗时(ms)。</item>
-///   <item>无 --hwnd → 退出码 2(用法错误);窗口不可见 / 已销毁 → 返回空帧但仍写占位 PNG + 退出码 0(S1 偏离裁决 #3)。</item>
+///   <item>无 --hwnd → 退出码 2(用法错误);窗口不可见 / 已销毁 → 返回空帧但跳过 ImWrite + 退出码 0(S1 偏离裁决 #3,RJ-S2-02 加固)。</item>
+/// </list>
+/// <para>M0-S2 改造(RJ-S2-02 / DEF-S2-02):</para>
+/// <list type="bullet">
+///   <item>WriteLine 之前把 <c>Width</c> / <c>Height</c> 缓存到局部变量(防御深度,Frame.Width/Height 也已构造期缓存);</item>
+///   <item>空 Mat(<c>Image.Empty</c>)不再尝试 <c>Cv2.ImWrite</c>(避免 OpenCV 抛"找不到匹配 writer"),按 S1 裁决 #3 视为占位帧、跳过写盘;</item>
+///   <item><c>frame.Image</c> 在 try/finally 中保证 <c>Dispose</c> 一次(空帧与非空帧均走同一释放路径);</item>
+///   <item><c>sw.Stop()</c> 移到 WriteLine 之前,维持原有"duration = capture + write"测量语义。</item>
 /// </list>
 /// </remarks>
 public sealed class CaptureCommand : IDh2Command
@@ -73,28 +80,42 @@ public sealed class CaptureCommand : IDh2Command
                 return (int)ExitCode.ConfigOrExecutionFailure;
             }
 
+            // RJ-S2-02 修复:Dispose 前缓存 Width/Height,确保 WriteLine 安全读取。
+            var frameWidth = frame.Width;
+            var frameHeight = frame.Height;
             var fileName = $"frame_{DateTime.UtcNow:yyyyMMddHHmmssfff}_{i:D3}.png";
             var filePath = Path.Combine(outDir, fileName);
 
-            try
+            // RJ-S2-02 修复:空 Mat 不尝试 ImWrite,避免 OpenCV 抛"找不到匹配 writer"。
+            // 注意:OpenCvSharp 的 Mat.Empty 是 Func<bool> lambda 属性,需 () 调用。
+            var emptyFrame = frame.Image.Empty();
+            var writeError = false;
+            if (!emptyFrame)
             {
-                // 空帧(Image 为空 Mat)按裁决 #3:仍写占位 PNG(0×0)便于调试断言不抛异常
-                Cv2.ImWrite(filePath, frame.Image);
+                try
+                {
+                    Cv2.ImWrite(filePath, frame.Image);
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[capture error] write frame {i}: {ex.Message}");
+                    writeError = true;
+                }
             }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine($"[capture error] write frame {i}: {ex.Message}");
-                return (int)ExitCode.ConfigOrExecutionFailure;
-            }
-            finally
-            {
-                frame.Image.Dispose();
-            }
+
+            // 一次性释放(空帧与非空帧均走同一路径;防止双重释放与访问违例)。
+            frame.Image.Dispose();
 
             sw.Stop();
             frameDurationsMs[i] = sw.Elapsed.TotalMilliseconds;
 
-            Console.WriteLine($"frame {i + 1}/{count}  hwnd=0x{hwnd:X}  size={frame.Width}x{frame.Height}  duration={frameDurationsMs[i]:F1}ms  -> {fileName}");
+            if (writeError)
+            {
+                return (int)ExitCode.ConfigOrExecutionFailure;
+            }
+
+            var status = emptyFrame ? "(empty frame, skipped)" : ("-> " + fileName);
+            Console.WriteLine($"frame {i + 1}/{count}  hwnd=0x{hwnd:X}  size={frameWidth}x{frameHeight}  duration={frameDurationsMs[i]:F1}ms  {status}");
 
             if (i + 1 < count && intervalMs > 0)
             {
