@@ -17,6 +17,8 @@
   <ItemGroup>
     <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
     <PackageReference Include="System.Drawing.Common" />
+    <PackageReference Include="OpenCvSharp4" />
+    <PackageReference Include="OpenCvSharp4.Extensions" />
   </ItemGroup>
 
 </Project>

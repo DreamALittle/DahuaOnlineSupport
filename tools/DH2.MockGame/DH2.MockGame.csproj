@@ -35,4 +35,9 @@
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- RJ-S1-04:MockGame 启动时读 configs/mock-layout.yaml 渲染,几何/样式/状态机文案/状态计时一律来自 Core.MockLayoutConfig -->
+    <ProjectReference Include="..\..\src\DH2.Core\DH2.Core.csproj" />
+  </ItemGroup>
+
 </Project>

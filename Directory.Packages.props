@@ -18,6 +18,7 @@
     <!-- 视觉 / OpenCv(类型层 + 运行时) -->
     <PackageVersion Include="OpenCvSharp4" Version="4.10.0.20241107" />
     <PackageVersion Include="OpenCvSharp4.runtime.win" Version="4.10.0.20241107" />
+    <PackageVersion Include="OpenCvSharp4.Extensions" Version="4.10.0.20241107" />
 
     <!-- 图像 / GDI -->
     <PackageVersion Include="System.Drawing.Common" Version="8.0.0" />
