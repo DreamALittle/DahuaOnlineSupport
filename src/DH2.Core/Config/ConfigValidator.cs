@@ -8,8 +8,10 @@ public static class ConfigValidator
 {
     private static readonly HashSet<string> SupportedDrivers = new(StringComparer.OrdinalIgnoreCase)
     {
+        // M0 仅实现 background;foreground 在 M0 未实现,但列入集合使 else-if 分支可达,
+        // 由下方专门分支输出"foreground driver not implemented in M0; use 'background'"。
         "background",
-        // "foreground" M0 未实现,启动即报"未实现"错误(由本校验负责)
+        "foreground",
     };
 
     /// <summary>

@@ -16,9 +16,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
-    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
-    <PackageReference Include="OpenCvSharp4" Version="4.10.0.20241107" />
-    <PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20241107" />
+    <PackageReference Include="System.Drawing.Common" />
+    <PackageReference Include="OpenCvSharp4" />
+    <PackageReference Include="OpenCvSharp4.Extensions" />
   </ItemGroup>
 
 </Project>
