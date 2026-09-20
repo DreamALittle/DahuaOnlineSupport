@@ -18,6 +18,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>DH2.MockGame</RootNamespace>
     <AssemblyName>DH2.MockGame</AssemblyName>
+    <!-- NU1903: Avalonia 11 间接依赖 Tmds.DBus.Protocol 0.20.0(Linux DBus),Windows 不运行时不受影响;已知漏洞 Linux 平台,DH2 项目运行环境为 Windows,故抑制 -->
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
