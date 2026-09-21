@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.MockGame — 模拟游戏窗体(Avalonia)
+    - 裁决 RJ-M0-S1 §2:全解决方案统一 Avalonia 11.2.x(Dev A 骨架为准)
+    - 完整实现由 Dev B 维护(Models/Services/ViewModels/Views),见 iter/m0
+    - M0-S2:启用 Directory.Packages.props 后 PackageReference 不再写 Version
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <RootNamespace>DH2.MockGame</RootNamespace>
+    <AssemblyName>DH2.MockGame</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+    <Folder Include="Services\" />
+    <AvaloniaResource Include="Assets\**" />
+    <None Include="..\..\configs\mock-layout.yaml" Link="Configs\mock-layout.yaml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="Avalonia.Fonts.Inter" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- RJ-S1-04:MockGame 启动时读 configs/mock-layout.yaml 渲染,几何/样式/状态机文案/状态计时一律来自 Core.MockLayoutConfig -->
+    <ProjectReference Include="..\..\src\DH2.Core\DH2.Core.csproj" />
+  </ItemGroup>
+
+</Project>

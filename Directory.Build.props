@@ -1,0 +1,56 @@
+<!--
+  DH2 解决方案级 MSBuild 属性(本文件被 SDK 自动导入到所有项目)
+  - 统一 TFM / 可空性 / 警告即错误 / 语言版本
+  - 项目内具体差异(IsPackable / OutputType 等)仍可在 csproj 覆盖
+-->
+<Project>
+
+  <PropertyGroup>
+    <!-- 目标框架:M0 全栈 Windows(Win32 P/Invoke / GDI / WPF / WGC) -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+
+    <!-- 可空引用类型:开启 -->
+    <Nullable>enable</Nullable>
+
+    <!-- 警告即错误:G3 门禁 -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+    <!-- 语言版本:最新 C#(SDK 10.0.103) -->
+    <LangVersion>latest</LangVersion>
+
+    <!-- 隐式 using:启用,减少样板 -->
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- 生成确定性构建(便于回溯与缓存) -->
+    <Deterministic>true</Deterministic>
+
+    <!-- 现代 .NET 单一 artifacts/ 输出 -->
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+
+    <!-- 公共元数据 -->
+    <Company>DH2</Company>
+    <Product>DH2</Product>
+    <Authors>dev-a@dh2.local</Authors>
+    <Copyright>DH2 personal-use tool, no distribution.</Copyright>
+
+    <!-- 测试项目统一关闭 IsPackable(我们不发布 nuget 包) -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- 单源生成:文档注释 / 文件尾 newline -->
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+  </PropertyGroup>
+
+  <!--
+    NU1903(NuGet 漏洞咨询)全局抑制:
+    - 由 Avalonia 11.x 传递依赖 Tmds.DBus.Protocol 触发(GHSA-xrw6-gwf8-vvr9)
+    - 非本仓库代码可控;跟踪修复后移除此 NoWarn
+    - 详见 docs/iterations/M0/ITER-M0-技术设计.md §10(已知陷阱)
+  -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
+  </PropertyGroup>
+
+</Project>

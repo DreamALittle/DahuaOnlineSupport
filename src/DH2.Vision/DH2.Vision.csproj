@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    DH2.Vision — 模板匹配与 manifest
+    - OpenCvSharp4:TM_CCOEFF_NORMED + mask(单模板 M0 无 mask)
+    - 实现属于 S3;M0-S1 仅交付项目骨架
+    - 引用方向:Vision → Core
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>DH2.Vision</RootNamespace>
+    <AssemblyName>DH2.Vision</AssemblyName>
+    <Description>DH2 视觉层:OpenCvSharp4 模板匹配 + manifest 加载</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
+    <PackageReference Include="OpenCvSharp4" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" />
+    <PackageReference Include="System.Drawing.Common" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,26 @@
+# 真机配置样例(用户复制为 configs/local/game.yaml 后按实际填写)
+# 路径:configs/local/game.yaml(.gitignore 已排除,不入仓)
+#
+# 提示:
+# - titlePattern 按实际游戏窗口标题调整(默认匹配"大话西游")
+# - matching.defaultThreshold 真机常下调至 0.80(屏幕噪声更多)
+# - input.postClickDelayMs 真机常上调至 60(防止两次消息间隔过短不触发 Click)
+# - driver=foreground 暂未实现;启动即报"未实现"错误
+
+profile: game_std              # 首次真机验证先手建 profile 并 save-template
+
+targets:
+  - name: game
+    titlePattern: '大话西游'
+    # processName: 可选;如 'gameclient.exe'
+
+paths:
+  templates: templates
+  artifacts: artifacts
+
+matching:
+  defaultThreshold: 0.80
+
+input:
+  driver: background
+  postClickDelayMs: 60

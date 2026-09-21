@@ -1,0 +1,11 @@
+﻿Profile: mock_800x600
+Templates:
+- Key: mock_taskbar
+  File: png/mock_taskbar.png
+  Threshold: 0.85
+  ClickOffset:
+    X: 0
+    Y: 0
+  Roi: ''
+  Since: m0
+

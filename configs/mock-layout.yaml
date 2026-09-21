@@ -1,0 +1,32 @@
+# DH2.MockGame 布局与运行时参数(单一真源)
+# 与 src/DH2.Core/Config/MockLayoutConfig.cs 字段一一对应(技术设计 §7 / §8)
+# 100% 缩放下 1 DIP = 1 px(技术设计 §10 陷阱#1, #2)
+# 样式字段(颜色 / 字号 / 状态 / 按钮文本)由 MockGame 按 §7 标准值内部常量化,不进 yaml
+# 时间单位:毫秒(ms)
+
+profile: mock_800x600
+
+tempDir: "%TEMP%/dh2-mockgame"   # 调用方展开环境变量
+
+window:
+  width: 800
+  height: 600
+
+taskbar:    # 任务追踪栏矩形(客户区坐标系)
+  x: 16
+  y: 16
+  width: 320
+  height: 88
+
+status:     # 状态文本锚点(自适应宽高)
+  x: 16
+  y: 116
+
+button:     # 主按钮矩形
+  x: 16
+  y: 180
+  width: 140
+  height: 48
+
+stateTimings:
+  pathfindingMs: 2000

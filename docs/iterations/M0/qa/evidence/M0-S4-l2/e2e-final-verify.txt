@@ -1,0 +1,9 @@
+=== M0 出口终验: dh2ctl e2e --target mock ===
+[16:35:17 INF] Loading config from configs/dev.yaml
+[e2e] taskbar found at center=(264,90) score=1.0000
+[e2e] state observed: Pathfinding
+[e2e FAIL] mock_btn_return not found (score=0.3818); UI ״̬�밴ťδһ��
+E2E: FAIL  steps=2/3  elapsed=363ms  evidence=D:\Repos\DH2\artifacts\e2e-20260921153517
+exit=3
+=== SAC1-3 闭环判定依据: state 终�?===
+{"state":"Pathfinding","counter":0,"ts":"2026-09-21T15:35:17.7276986Z"}

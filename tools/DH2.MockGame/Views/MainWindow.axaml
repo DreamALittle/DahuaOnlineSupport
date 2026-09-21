@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DH2.MockGame.ViewModels"
+        x:Class="DH2.MockGame.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="DH2.MockGame"
+        Background="#000000">
+
+    <!-- RJ-S1-04:所有几何(X/Y/W/H)绑定到 ViewModel,后者来自 Core.MockLayoutConfig(mocks-layout.yaml) -->
+    <Canvas>
+
+        <!-- 任务追踪栏 -->
+        <Border Canvas.Left="{Binding TaskbarX}"
+                Canvas.Top="{Binding TaskbarY}"
+                Width="{Binding TaskbarWidth}"
+                Height="{Binding TaskbarHeight}"
+                Background="#1E1E2E"
+                BorderBrush="#555555"
+                BorderThickness="2">
+            <TextBlock Text="{Binding TaskbarText}"
+                       Foreground="#FFFFFF"
+                       FontSize="20"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Border>
+
+        <!-- 状态文本(自适应宽高,仅左上角锚点) -->
+        <TextBlock Text="{Binding StatusText}"
+                   Canvas.Left="{Binding StatusX}"
+                   Canvas.Top="{Binding StatusY}"
+                   Foreground="#FFFFFF"
+                   FontSize="18" />
+
+        <!-- 主按钮 -->
+        <Button x:Name="MainButton"
+                Canvas.Left="{Binding ButtonX}"
+                Canvas.Top="{Binding ButtonY}"
+                Width="{Binding ButtonWidth}"
+                Height="{Binding ButtonHeight}"
+                Background="#2D5BFF"
+                Foreground="#FFFFFF"
+                FontSize="18"
+                IsEnabled="{Binding IsButtonEnabled}"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Click="OnMainButtonClick">
+            <TextBlock Text="{Binding ButtonText}" Foreground="#FFFFFF" FontSize="18" />
+        </Button>
+
+    </Canvas>
+</Window>

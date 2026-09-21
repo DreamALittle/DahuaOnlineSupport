@@ -1,0 +1,26 @@
+profile: mock_800x600
+templates:
+- key: mock_taskbar
+  file: png/mock_taskbar.png
+  threshold: 0.85
+  clickOffset:
+    x: 0
+    y: 0
+  roi: ''
+  since: m0
+- key: mock_btn_go
+  file: png/mock_btn_go.png
+  threshold: 0.85
+  clickOffset:
+    x: 0
+    y: 0
+  roi: ''
+  since: m0
+- key: mock_btn_return
+  file: png/mock_btn_return.png
+  threshold: 0.85
+  clickOffset:
+    x: 0
+    y: 0
+  roi: ''
+  since: m0
