@@ -54,6 +54,20 @@ internal static partial class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
+    /// <summary>
+    /// 后台消息投递(技术设计 §3.3 + §6)。把消息放入目标窗口线程队列,不需前台焦点。
+    /// M0 用于 <see cref="PostMessageDriver"/> 实现鼠标点击序列。
+    /// </summary>
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PostMessageW(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+    // ---------- 鼠标消息常量(技术设计 §3.3) ----------
+    public const uint WM_MOUSEMOVE = 0x0200;
+    public const uint WM_LBUTTONDOWN = 0x0201;
+    public const uint WM_LBUTTONUP = 0x0202;
+    public const int MK_LBUTTON = 0x0001;
+
     /// <summary>RECT 结构(Win32 原生)。</summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT

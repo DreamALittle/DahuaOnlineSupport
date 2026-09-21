@@ -121,6 +121,7 @@ internal static class Program
             "capture" => new CaptureCommand(),
             "save-template" => new SaveTemplateCommand(),
             "match" => new MatchCommand(),
+            "e2e" => new E2eCommand(),
             _ => null,
         };
 
