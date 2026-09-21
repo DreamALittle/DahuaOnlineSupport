@@ -1,0 +1,4 @@
+=== match mock_btn_go(Idle ̬)===
+[11:38:19 INF] Loading config from configs/dev.yaml
+{"found":false,"score":0.2919,"location":[0,0],"size":[0,0],"center":[0,0]}
+exit=0

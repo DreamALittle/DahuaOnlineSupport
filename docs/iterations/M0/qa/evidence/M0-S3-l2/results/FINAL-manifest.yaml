@@ -1,4 +1,4 @@
-profile: mock_800x600
+﻿profile: mock_800x600
 templates:
 - key: mock_taskbar
   file: png/mock_taskbar.png

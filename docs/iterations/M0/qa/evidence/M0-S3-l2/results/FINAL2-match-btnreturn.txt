@@ -1,0 +1,7 @@
+cursor parked at window-right, state check:
+{"state":"Arrived","counter":0,"ts":"2026-09-21T11:01:26.8396555Z"}
+{"saved":true,"key":"mock_btn_return","file":"png/mock_btn_return.png","threshold":0.85,"size":[210,72]}
+=== 终审 match mock_btn_return(�?hover)===
+{"found":true,"score":0.9145,"location":[24,266],"size":[210,72],"center":[129,302]}
+exit=0
+CLEAN_DONE
