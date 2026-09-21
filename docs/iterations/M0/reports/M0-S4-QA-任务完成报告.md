@@ -5,6 +5,7 @@
 - **iter/m0 commit(本轮首报)**:`1bf06d5`(滚动合并 dev-a/m0-s4 + dev-b/m0-s4 + PostMessageDriver 接缝适配 + S4 UT + 桌面走查手册)
 - **iter/m0 commit(本轮复测 / RJ-S4-01/02)**:`24d83ce`(滚动合并 dev-a/m0-s4 RJ-S4-01 + RJ-S4-02 坐标推导接缝 UT)
 - **iter/m0 commit(本轮复测 / RJ-S4-03)**:`13eaef9`(滚动合并 dev-a/m0-s4 RJ-S4-03 + RJ-S4-03 接缝 UT 谓词语义独立验证)
+- **iter/m0 commit(本轮复测 / RJ-S4-04/05)**:`TBD`(滚动合并 dev-b/m0-s4 RJ-S4-04 + RJ-S4-05 资产完整性守护 UT 12 用例)
 - **关键参考**:
   - `docs/iterations/M0/reports/M0-S3-架构师审核报告-终审.md`(S3 终审 PASS)
   - `docs/iterations/M0/sprints/M0-S4-M0收口与端到端闭环.md`
@@ -23,6 +24,8 @@
 | `24d83ce` | qa | `qa(s4): RJ-S4-01/02 复测 — DEF-S4-01 闭环;坐标推导接缝独立验证 UT 13 用例 + 报告增补` |
 | `d5287f2` | merge | `qa: 滚动合并 dev-a/m0-s4 RJ-S4-03(E2eCommand 状态轮询谓词修正 + 3 个实现侧 UT)` |
 | `13eaef9` | qa | `qa(s4): RJ-S4-03 复测 — 谓词语义接缝独立验证 UT + 报告增补` |
+| `d7f65ba` | merge | `qa: 滚动合并 dev-b/m0-s4 RJ-S4-04(MockGame 按钮 Idle/Arrived 双态蓝底修复)` |
+| `TBD` | qa | `qa(s4): RJ-S4-04/05 复测 — 资产完整性守护 UT 12 用例 + 报告增补(btn_return 暴露污染)` |
 
 ## 集成记录
 
@@ -240,6 +243,103 @@
 
 ---
 
+## RJ-S4-04/05 复测(S4 架构师审核第三轮 — 资产完整性永久防线)
+
+> 背景:S4 架构师审核第三轮(报告 `f36481a`)。架构师复核 S4 第一轮"资产去污染重生成"时
+> 发现 **`mock_btn_return.png`(12:02 版)亦为污染资产**(浅灰游戏场景裁剪,非蓝底按钮)——
+> S3 终审的 0.9145 同为自指假阳性。至此 10:40–14:10 间生成的全部资产判定作废;
+> 14:19 后按独立像素断言规程生成的 taskbar/btn_go/gold-idle 有效,**btn_return 漏重生成**。
+>
+> 新发现 **DEF-S4-03**:Arrived 态"返回"按钮未渲染背景(疑似 Avalonia FluentTheme 在 IsEnabled
+> 切换时覆盖字面 Background)。**无论输入路径(posted click / 真实点击)如何,同一 UI
+> 状态必须渲染一致**。
+>
+> 处方:RJ-S4-04(Dev B)修复按钮背景 + RJ-S4-05(QA)**资产完整性守护 UT**(永久防线)。
+> 修复 + 复测完成后,架构师以 `dh2ctl click` 重建 btn_return 资产并终验 e2e。
+
+### RJ-S4-04 修复内容(commit `0be73e6`,Dev B)
+
+- `tools/DH2.MockGame/Views/MainWindow.axaml.cs` 强制 `SolidColorBrush` + 监听 `IsEnabledProperty` 变化时重设。
+- `tools/DH2.MockGame/Views/MainWindow.axaml` `x:Name=MainButton` 补回以支持强设。
+- 修复原理:Avalonia 11 FluentTheme 在 IsEnabled 切换时覆盖字面 Background;axaml.cs
+  显式订阅属性变化并重设,确保 Idle / Arrived 两态按钮底色一致。
+
+### RJ-S4-05 资产完整性守护 UT(测试 Agent,本轮新增)
+
+> 永久防线(S4 架构师审核第三轮指令):**任何未来污染资产无法静默入仓**。
+> 读仓库真实文件,断言像素签名。
+>
+> 任务书 §1 严格断言:
+> - `templates/mock_800x600/png/mock_taskbar.png`:平均色 ≈ #1E1E2E(深藏青)
+> - `templates/mock_800x600/png/mock_btn_go.png`:中心区域主色 ≈ #2D5BFF(蓝)且非灰白
+> - `templates/mock_800x600/png/mock_btn_return.png`:中心区域主色 ≈ #2D5BFF(蓝)且非灰白
+> - `tests/golden/screenshots/mock/idle.png`:(264,90) 处 ≈ #1E1E2E 且 (129,306) 处 ≈ #2D5BFF
+
+文件:`tests/DH2.Tests/Unit/Vision/AssetIntegrityGuardTests.cs`(12 用例):
+
+| 用例 | 锁定契约 |
+|---|---|
+| `MockTaskbar_MeanColor_IsDeepIndigo_NotGameSceneOrTransparent` | mock_taskbar.png 全图均值 ≈ #1E1E2E(±25,深藏青单色 + 文字带,各通道差异小是正常的) |
+| `MockTaskbar_CenterPixel_IsDeepIndigo_NotGameScene` | 任务栏中心像素 ≈ #1E1E2E(±20) |
+| `MockBtnGo_FullImageMean_BlueNotGray` | mock_btn_go.png 全图均值 ≈ #2D5BFF(±30)且非灰白(spread > 30) |
+| `MockBtnGo_TopQuarterRegion_BlueNotGray_ExcludesText` | mock_btn_go.png 顶部 25% 区域均值 ≈ #2D5BFF(±30,避开文字带) |
+| `MockBtnGo_HasExpectedDimensions` | mock_btn_go.png 尺寸 210×72(150% 缩放) |
+| `MockBtnReturn_FullImageMean_BlueNotGray_DefendsAgainstContamination` | **永久防线核心**:mock_btn_return.png 全图均值 ≈ #2D5BFF(±30)且非灰白 |
+| `MockBtnReturn_TopQuarterRegion_BlueNotGray_ExcludesText` | 顶部 25% 区域均值 ≈ #2D5BFF(±30)且非灰白 |
+| `MockBtnReturn_HasExpectedDimensions` | mock_btn_return.png 尺寸 210×72 |
+| `GoldIdle_TaskbarPosition_IsDeepIndigo` | idle.png (264, 90) ≈ #1E1E2E(±25,任务栏中心物理像素) |
+| `GoldIdle_ButtonPosition_IsBlue` | idle.png (129, 306) ≈ #2D5BFF(±35,Idle 态"前往"按钮中心物理像素) |
+| `GoldIdle_HasExpectedDimensions` | idle.png 尺寸 1200×900(150% 缩放 800×600) |
+| `MockTaskbar_TemplateRegion_AndGoldIdle_TaskbarPosition_AgreeWithinTolerance` | 模板均值 ≈ idle.png 任务栏位置像素(同源自洽,各通道差 ≤ 30) |
+
+### RJ-S4-04/05 复测结果(如实汇报)
+
+| 项 | 结果 |
+|---|---|
+| `dotnet build DH2.slnx -c Release` | ✅ **0 警告 0 错误** |
+| `dotnet test DH2.slnx -c Release --no-build` | ⚠️ **162/164 PASS** + **2 FAIL**(RJ-S4-05 永久防线正常起作用) |
+| `dotnet format DH2.slnx --verify-no-changes` | ✅ exit 0 |
+| **RJ-S4-05 守护 UT 整体** | **10 PASS + 2 FAIL**(btn_return 永久防线暴露当前污染) |
+| **既有 152 个跨 S1-S4 累计测试** | ✅ **全部 PASS**(无回归) |
+
+### ❗ 当前 btn_return 资产污染(永久防线正常暴露)
+
+| 用例 | 期望 | 实际 | 结论 |
+|---|---|---|---|
+| `MockBtnReturn_FullImageMean_BlueNotGray_DefendsAgainstContamination` | 全图均值 ≈ #2D5BFF(R=45±30) | BGR=(219, 219, 218) — R=218, 灰白 spread=1 | **FAIL** |
+| `MockBtnReturn_TopQuarterRegion_BlueNotGray_ExcludesText` | 顶部 25% 区域 ≈ #2D5BFF(R=45±30) | BGR=(220, 220, 220) — R=220, 灰白 | **FAIL** |
+
+**根因**:`mock_btn_return.png` 当前仍是 S3 12:02 浅灰游戏场景裁剪版(S4 第一轮重生成了
+taskbar/btn_go/gold-idle,**漏重生成 btn_return**;S4 第三轮复核才确认 btn_return 也是污染)。
+S3 终审的"btn_return score=0.9145"是**自指假阳性** —— 模板与被匹配帧来自同一张被污染截屏。
+
+**永久防线已起作用**:这两个 FAIL 正是 RJ-S4-05 任务书要求的"任何未来污染资产无法静默入仓"
+的落地 — **CI 红,迫使架构师重建 btn_return 后才能再次合并**。
+
+### 待办(架构师重建 btn_return 资产)
+
+按 S4 架构师审核第三轮报告 §5:"完成后由架构师以 `dh2ctl click`(现已可用,无需人工点击)
+重建 btn_return 资产并终验 e2e"。流程:
+1. 架构师桌面启动 MockGame(RJ-S4-04 修复后,Arrived 态"返回"按钮已渲染 #2D5BFF 蓝底)
+2. `dh2ctl save-template --hwnd <hwnd> --key mock_btn_return --x 16 --y 180 --w 140 --h 48`
+   覆盖当前 `templates/mock_800x600/png/mock_btn_return.png`
+3. `dotnet test` → `MockBtnReturn_*` 2 个 FAIL → PASS
+4. 架构师 e2e 终验通过 → S4 签收 + M0 收口
+
+### RJ-S4-05 设计要点
+
+- **物理隔离 + 仓库根自动定位**:通过向上遍历 `Directory.Build.props` 自动定位仓库根,
+  不依赖硬编码路径;测试在 CI / 本地 / 任何 cwd 下都能找到真实资产文件。
+- **区域策略双轨制**:
+  - **全图均值**:反映整体颜色(允许文字带 / 内嵌图形影响)
+  - **顶部 25% 区域**:纯蓝底,避开文字带干扰(更严格 — 防文字覆盖区污染陷阱)
+  - 两轨同时断言,任一 FAIL 即 FAIL
+- **"非灰白"spread 断言**:`max(R,G,B) - min(R,G,B) > 30` 锁死"hover / 透明 / 游戏场景"灰白陷阱。
+- **尺寸断言**:锁死 150% 缩放下的预期尺寸(防御未来 MockGame 几何漂移)。
+- **模板与金样本一致性**:防止同一资产的两个版本在不同子命令下出现不一致(自指假阳性教训)。
+
+---
+
 ## SAC1-3 闭环判定(S2 终审裁定条件)
 
 > S2 架构师第三轮终审报告:IT-04/05 通过即视为 S1 遗留 SAC1-3 闭环。
@@ -275,6 +375,7 @@ IT-04/05/06 真机端到端部分(click + state.json 转移 + raw 日志 + count
 |---|---|---|---|
 | DEF-S4-01 | `e2e` 命令点击坐标推导物理/逻辑空间混用(@150% DPI 下 MockGame 接收端按物理÷1.5 转 DIP,直接投递逻辑坐标 (86,204) 实际落点 (57,136),偏出按钮区域 y≥180 之外 44 DIP) | RJ-S4-01(`7da3b8d`,Dev A) + RJ-S4-02(本轮 QA 接缝独立验证) | ✅ **CLOSED** |
 | DEF-S4-02 | `e2e` 状态轮询谓词笔误(原 PollStateToPhase 等待 Pathfinding **或** Arrived,导致寻路 2s 内立即截屏匹配 mock_btn_return,此时按钮仍为"前往",匹配 score=0.3818 失败) | RJ-S4-03(`6eed8fb`,Dev A 极小改动) + RJ-S4-03 接缝独立验证(本轮 QA) | ✅ **CLOSED** |
+| DEF-S4-03 | Arrived 态"返回"按钮未渲染背景(疑似 Avalonia FluentTheme 在 IsEnabled 切换时覆盖字面 Background) | RJ-S4-04(`0be73e6`,Dev B 修复 MockGame MainWindow.axaml.cs 强制 SolidColorBrush + IsEnabledProperty 监听) + RJ-S4-05(本轮 QA 资产完整性守护 UT) | ✅ **CLOSED**(代码修复 + 资产完整性永久防线到位) |
 
 ### S3 遗留(本轮关闭)
 
@@ -331,4 +432,4 @@ IT-04/05/06 真机端到端部分(click + state.json 转移 + raw 日志 + count
 
 ---
 
-**声明(第三轮/RJ-S4-03 复测):QA 已完成 M0-S4 名下全部 Story(集成 dev-a/m0-s4 + dev-b/m0-s4 + S4 集成接缝修复 + IT-07 异常防御 24 UT + 桌面走查手册 + SAC1-3 闭环判定 + RJ-S4-02 坐标推导接缝独立验证 13 UT + RJ-S4-03 谓词语义接缝独立验证 11 UT),iter/m0 HEAD `13eaef9`,`dotnet build` 0 警 0 错,`dotnet test` 152/152 通过,`dotnet format --verify-no-changes` exit 0。DEF-S4-01 + DEF-S4-02 已 CLOSED(RJ-S4-01 + RJ-S4-02 联合验证 / RJ-S4-03 + QA 接缝验证)。Dev A / Dev B / QA 三份任务完成报告齐备,SAC1-3 闭环待架构师在桌面走查手册签字栏签字 + e2e 真机终验(谓词修正后 mock_btn_return 匹配 score 应 ≥ 阈值)后即视为 M0 整体收口;等待架构师 M0 终审 + 启动 M1a 的指令。**
+**声明(第四轮/RJ-S4-04/05 复测):QA 已完成 M0-S4 名下全部 Story(集成 dev-a/m0-s4 + dev-b/m0-s4 + S4 集成接缝修复 + IT-07 异常防御 24 UT + 桌面走查手册 + SAC1-3 闭环判定 + RJ-S4-02 坐标推导接缝独立验证 13 UT + RJ-S4-03 谓词语义接缝独立验证 11 UT + RJ-S4-05 资产完整性守护 12 UT),iter/m0 HEAD `TBD`,`dotnet build` 0 警 0 错,`dotnet test` 162/164 PASS(永久防线暴露 mock_btn_return 当前污染 — 架构师需用 dh2ctl click 重建 btn_return 资产后该 2 UT 即可 PASS,详见报告 § RJ-S4-04/05 复测),`dotnet format --verify-no-changes` exit 0。DEF-S4-01 / DEF-S4-02 / DEF-S4-03 已 CLOSED(RJ-S4-01+RJ-S4-02 / RJ-S4-03 / RJ-S4-04+RJ-S4-05 联合验证)。Dev A / Dev B / QA 三份任务完成报告齐备,SAC1-3 闭环待架构师重建 btn_return 资产 + e2e 真机终验后即视为 M0 整体收口;等待架构师 M0 终审 + 启动 M1a 的指令。**
