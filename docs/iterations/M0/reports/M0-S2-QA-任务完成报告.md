@@ -213,3 +213,130 @@ L2 证据累计 12 份,落 `docs/iterations/M0/qa/evidence/M0-S2-l2/`:
 - SAC1-3:按架构师 S2 审核 §4 修订,闭环条件改至 S4 e2e
 
 请架构师快速复审(核对 RJ-S2-01 修复 + IT-01/02 基础设施验证),通过即签发"开始 M0-S3"放行指令。
+
+---
+
+# 第六轮: RJ-S2-02/03 复测(用户复测指令二响应,2026-09-21)
+
+> 本节由用户"复测指令——QA" S2 第二轮触发:①跟踪 dev-a RJ-S2-02 与 dev-b RJ-S2-03 推送;②复测 build+test+Mat 生命周期回归 UT;③IT-02 headless 部分验证(capture --hwnd 0 / --count 非法参数)+ 真实窗口标注待架构师复核;④本报告 §6。
+
+## 6.1 集成记录
+
+| 分支 | HEAD | 集成方式 | 冲突 |
+|---|---|---|---|
+| `dev-b/m0-s2` (6712474,RJ-S2-03) | `git merge --no-ff` → `7e54d1d` | 零 |
+| `dev-a/m0-s2` (b7d7406,RJ-S2-02) | `git merge --no-ff` → `a7e9211` | 零 |
+
+## 6.2 复测执行明细
+
+### 6.2.1 RJ-S2-02(Dev A, `b7d7406`)
+
+修复内容(commit message 摘要):
+- `Frame.Width` / `Frame.Height` 在构造期通过 `init` 表达式一次性缓存(`Image.Width` / `Image.Height`),杜绝 Image.Dispose 后访问已释放 Mat 触发 0xC0000005
+- `CaptureCommand` 加固:WriteLine 前缓存 width/height 到局部变量(防御深度);空 Mat(`frame.Image.Empty()`)跳过 `Cv2.ImWrite`(避免 OpenCV 抛"找不到匹配 writer",符合 S1 裁决 #3);`frame.Image` 在 try/finally 中保证 Dispose 一次(空/非空同路径,无双释放)
+- 新增 `tests/DH2.Tests/Unit/Models/FrameLifecycleTests.cs` — 5 个 Mat 生命周期回归 UT
+
+### 6.2.2 RJ-S2-03(Dev B, `6712474`)
+
+修复内容:
+- `GdiCapture`:BitmapConverter.ToMat(Bitmap) 在 OpenCvSharp4.Extensions 4.10.x 是共享内存(指针别名,不复制像素)→ 必须 `Clone()` 得独立副本后才 Dispose Bitmap,否则 Mat 悬垂
+- `Frame.Image` 由**调用方负责释放**;GdiCapture 不持有也不释放
+- 任何中间步骤异常退化为空帧(满足 S1 裁决 #3)
+
+### 6.2.3 build + test + coverage + format
+
+| 项 | 命令 | 结果 |
+|---|---|---|
+| 全 sln Release build | `dotnet build DH2.slnx -c Release` | ✅ 0 警告 0 错误(4.85s) |
+| 全 sln 测试 | `dotnet test DH2.slnx -c Release --no-build` | ✅ **64/64 通过**(362ms;原 59 + Dev A 新增 5 个 `FrameLifecycleTests`) |
+| 覆盖率 | coverlet XPlat | DH2.Core **96.52%** / 分支 93.33%(从 S2 第五轮的 87.12% 跃升 +9.4pp;Frame 模型 init 表达式路径大量触发) |
+| 格式门禁 | `dotnet format DH2.slnx --verify-no-changes` | ✅ exit 0 |
+
+### 6.2.4 Mat 生命周期回归 UT 断言有效性审查
+
+`tests/DH2.Tests/Unit/Models/FrameLifecycleTests.cs` — Dev A 新增 5 用例:
+
+| 用例 | 断言要点 | 有效性判定 |
+|---|---|---|
+| `Frame_WidthAndHeight_AreReadSafe_AfterImageDispose` | 构造真实 Mat(640×480)→ 缓存 width/height → `mat.Dispose()` → 再读 width/height(原 bug 触发 0xC0000005)→ 前后值一致且正确 | ✅ **核心回归用例**,锁死 RJ-S2-02 主修复;直接针对 0xC0000005 触发条件 |
+| `Frame_EmptyMat_CachedDimensions_AreZero` | `new Mat()`(空矩阵)→ 构造 Frame → width=0/height=0 → Dispose 后再读仍 = 0 | ✅ 锁死空 Mat 边界 |
+| `Frame_EmptyMatPlaceholder_IsReusable` | 5 次循环:每次 `new Mat()` → Frame → `mat.Empty()=true` → Dispose → 再读 width/height = 0 | ✅ 防空 Mat 共享/泄漏导致的二次 AV(GdiCapture.EmptyFrame 按需 new 契约) |
+| `Frame_RealMat_ReleaseThenNewFrame_DoesNotCorrupt` | 第一个 Frame(800×600)Dispose 后,第二个 Frame(1024×768)独立正确读取;Dispose 后缓存值仍正确 | ✅ 防跨 Frame 实例状态污染(模拟 `capture --count 2` 的两次迭代) |
+| `Mat_EmptyMethod_ReturnsTrue_OnAliveEmptyMat` | alive 空 Mat 报告 `Empty()=true`(Dispose 后 Empty() 抛 ObjectDisposedException 文档记录) | ✅ 锁死 CaptureCommand "alive 空 Mat 决策"路径的契约 |
+
+**判定**:5 用例针对 RJ-S2-02 修复的 4 个核心场景(Dispose 后可读 / 空 Mat 边界 / 空 Mat 复用 / 跨实例隔离 / Empty 决策契约),**断言质量良好,无遗漏**。
+
+## 6.3 IT-02 headless 部分验证(用户复测指令 ③)
+
+**headless 环境限制**:无 GUI,无法启动 MockGame 真实窗口;按用户指令"对可验证部分验证,capture --hwnd 0 必须退出码 2 且不崩溃、--count 0/负数等非法参数路径退出码 2;真实窗口路径标注'待架构师真机复核'"。
+
+| 命令 | 期望(用户指令 ③) | 实际 | 状态 |
+|---|---|---|---|
+| `capture --hwnd 0` | 退出码 2 + 不崩溃 | `[usage error] --hwnd <n> required (positive long)` + Exit **2** | ✅ **PASS**(原架构师证据显示此处曾抛 0xC0000005,RJ-S2-02 后已修复) |
+| `capture --count 5`(缺 --hwnd) | 退出码 2 | `[usage error] --hwnd <n> required (positive long)` + Exit **2** | ✅ **PASS** |
+| `capture --hwnd -1`(被 CLI 解析器拦作短选项) | 退出码 2 | `[usage error] unsupported short option '-1'` + Exit **2** | ✅ **PASS** |
+| `capture --count -5`(被 CLI 解析器拦作短选项) | 退出码 2 | `[usage error] unsupported short option '-5'` + Exit **2** | ✅ **PASS** |
+| `capture --hwnd 12345 --count 0` | 退出码 2(用户期望) | **静默回退到 DefaultCount=10,Exit 0** | ❌ **FAIL** |
+| `capture --hwnd 12345 --count=-5` | 退出码 2(用户期望) | **静默回退到 10,Exit 0** | ❌ **FAIL** |
+| `capture --hwnd 12345 --count=-1` | 退出码 2(用户期望) | **静默回退到 10,Exit 0** | ❌ **FAIL** |
+| `capture --hwnd 99999999999999999`(long 溢出) | (无明确期望) | 截断为合法 long,后续 3 帧空帧(无窗口) | ⚠️ 边界,未崩溃但行为无定义 |
+
+**`--count` 静默回退问题**:当前 `CaptureCommand.cs` 第 51-53 行:
+```csharp
+var count = options.TryGetValue("count", out var countStr) && int.TryParse(countStr, out var c) && c > 0
+    ? c
+    : DefaultCount;
+```
+`c > 0` 校验失败时**静默使用默认值 10**,不报 usage error。这是 RJ-S2-02 修复**未覆盖的边界**,按用户指令 ③ 应退出码 2 但当前 Exit 0。**开 DEF-S2-03 指派 Dev A**(RJ-S2-04 整改指令)。
+
+**真实窗口路径**(`capture --hwnd <真实句柄> --count 10`)验证状态:**待架构师真机复核**——
+- 架构师在 S2 第二轮复审前已产出 `04-capture.txt` + 1 张 23KB PNG(commit `5a9a022` 的 `frame_20260920234142735_000.png`),表明 capture 已能产出真实帧
+- 但完整 10 帧 + mean/p95 统计 + 空帧正确跳过 ImWrite 的端到端验证,需架构师在桌面会话执行一次以确认
+- 我(headless)无法启动 MockGame 进程,亦无法观察 800×600 实际渲染
+
+证据:`docs/iterations/M0/qa/evidence/M0-S2-l2/results/`(RJ-S2-02 复测的 headless 命令输出 + 架构师 `04-capture-crash.txt` 与 `04-capture.txt` 已落)
+
+## 6.4 缺陷清单
+
+### 已关闭
+
+| DEF | 处置 | 结果 |
+|---|---|---|
+| DEF-S2-01 DevConfig YamlDotNet | RJ-S2-01 | ✅ CLOSED(架构师第二轮复审已验证) |
+| DEF-S2-02 capture 访问违例 0xC0000005 | RJ-S2-02 + RJ-S2-03 | ✅ **CLOSED**(5 个 Mat 生命周期回归 UT 全绿 + GdiCapture Clone() 修复 + 头less 验证 --hwnd 0 退出码 2 不崩溃) |
+
+### 新增
+
+| DEF | 摘要 | 复现 | 期望 | 实际 | 指派 | 状态 |
+|---|---|---|---|---|---|---|
+| **DEF-S2-03** | `capture --count 0/负数` 静默回退到默认值 10(应退出码 2) | `dh2ctl capture --hwnd 12345 --count 0`(或 `--count=-1`) | 退出码 2 + usage error 信息 | Exit 0(静默 `c > 0 ? c : DefaultCount`) | **Dev A**(CaptureCommand 域) | **OPEN**;RJ-S2-04 整改指令:`--count` / `--interval-ms` 非法值(<0 或非整数)应与 `--hwnd` 一致报 usage error + 退出码 2 |
+
+## 6.5 复测结论
+
+| 项 | 结果 |
+|---|---|
+| RJ-S2-02 修复落地(Dev A) | ✅ commit `b7d7406` 已合并(`a7e9211`) |
+| RJ-S2-03 修复落地(Dev B) | ✅ commit `6712474` 已合并(`7e54d1d`) |
+| 全 sln build/test/format | ✅ 全绿(0 警 0 错 / **64/64 通过** / exit 0) |
+| DH2.Core 行覆盖 | **96.52%**(S2 第五轮 87.12% → +9.4pp,Frame init 路径大量触发) |
+| Mat 生命周期回归 UT(5 用例) | ✅ 断言质量良好,锁死 RJ-S2-02 主修复 4 个核心场景 |
+| IT-02 `--hwnd 0` 不崩溃 | ✅ 退出码 2(架构师原证据的 0xC0000005 已修) |
+| IT-02 `--count` 非法值退出码 2 | ❌ 静默回退到 10(DEF-S2-03 OPEN) |
+| IT-02 真实窗口端到端(10 帧 + mean/p95 + 空帧正确跳过) | ⚠️ **待架构师真机复核**(架构师已产出 1 张 23KB PNG 帧证明 capture 可产出真实帧;完整 10 帧 + 空帧跳过 ImWrite 端到端需桌面复跑) |
+| DEF-S2-02 状态 | ✅ **CLOSED** |
+| 新增 DEF-S2-03 | OPEN,RJ-S2-04 待 Dev A 整改 |
+
+**Sprint M0-S2 综合判定**:
+- 架构师 S2 第二轮复审阻塞项 DEF-S2-02 已 CLOSED
+- IT-02 部分验证通过(不崩溃 + 部分退出码正确)
+- 残余项:DEF-S2-03(count 静默回退)+ 真实窗口端到端复核(待架构师)
+
+---
+
+# RJ-S2-02/03 复测完成,请架构师第三轮复审
+
+- iter/m0 HEAD = `a7e9211`(本报告提交后新 commit)
+- 三报告齐备 + DEF-S2-02 CLOSED + 新增 DEF-S2-03 OPEN + 真实窗口端到端待架构师复核
+- 期望架构师第三轮复审:核对 RJ-S2-02/03 修复 + 5 个 Mat 生命周期 UT + DH2.Core 96.52% 覆盖;
+- 关于 DEF-S2-03:可与 RJ-S2-04 合并到同一整改批(S2 仍可签收而 DEF-S2-03 留作 S2→S3 过渡期整改)
+- 关于真实窗口端到端:若架构师本机执行 `capture --hwnd <MockGame hwnd> --count 10` 一次,即完成 S2 全部 L2 验证
