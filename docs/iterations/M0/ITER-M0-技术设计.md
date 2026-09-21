@@ -232,7 +232,7 @@ templates:
 3. match `mock_taskbar` → 不得 Found=false(否则 FAIL:任务栏定位失败);
 4. 从 `configs/mock-layout.yaml` 读按钮矩形 → 客户区中心坐标;**坐标空间规则(S4 终审修正):布局坐标为逻辑值,PostMessage 目标坐标必须换算到帧空间:`scale = frame.Width / layout.window.width`,按钮帧坐标 = taskbar 实测中心 + (按钮布局中心 − 任务栏布局中心) × scale**(接收端框架按物理→DIP 换算消息坐标,投递逻辑坐标在非 100% 缩放下会落空——S4 终审 DEF-S4-01 实测);
 5. click 该中心;
-6. 轮询 MockGame 状态文件(≤5s)至 `state == "Pathfinding"` 或 `"Arrived"`,超时 FAIL;
+6. 轮询 MockGame 状态文件(≤5s)至 `state == "Arrived"`(S4 终审修正:Pathfinding 为中间态,返回按钮仅在 Arrived 出现,谓词不得以 Pathfinding 截止),超时 FAIL;
 7. 再 capture 一帧,match `mock_btn_return`(已随模板库入库)确认"返回"按钮出现;
 8. 输出 `E2E: PASS/FAIL` 与步骤耗时,全部证据(帧 PNG、匹配 JSON、状态快照)落 `artifacts/e2e-{ts}/`。
 
