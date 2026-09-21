@@ -119,6 +119,8 @@ internal static class Program
         {
             "enumerate" => new EnumerateCommand(),
             "capture" => new CaptureCommand(),
+            "save-template" => new SaveTemplateCommand(),
+            "match" => new MatchCommand(),
             _ => null,
         };
 
@@ -147,8 +149,8 @@ internal static class Program
         Console.Error.WriteLine("Subcommands:");
         Console.Error.WriteLine("  enumerate    list windows matching config            [S2-4 ✓]");
         Console.Error.WriteLine("  capture      capture N frames of a window            [S2-4 ✓]");
-        Console.Error.WriteLine("  save-template (S3)");
-        Console.Error.WriteLine("  match         (S3)");
+        Console.Error.WriteLine("  save-template 截屏裁剪入库 + manifest 登记          [S3-3 ✓]");
+        Console.Error.WriteLine("  match         在最新截屏上定位模板                  [S3-3 ✓]");
         Console.Error.WriteLine("  click         (S4)");
         Console.Error.WriteLine("  e2e           (S4)");
         Console.Error.WriteLine("  report        (S4)");
@@ -167,8 +169,8 @@ internal static class Program
         sb.AppendLine("Subcommands (Sprint 节奏渐进接入):");
         sb.AppendLine("  enumerate       列出匹配 dev.yaml 的目标窗口              [S2-4 ✓]");
         sb.AppendLine("  capture         连续截屏指定窗口客户区                  [S2-4 ✓]");
-        sb.AppendLine("  save-template   截屏并登记为模板                         [S3]");
-        sb.AppendLine("  match           在新截屏上定位已登记模板                  [S3]");
+        sb.AppendLine("  save-template   截屏并登记为模板                        [S3-3 ✓]");
+        sb.AppendLine("  match           在新截屏上定位已登记模板                [S3-3 ✓]");
         sb.AppendLine("  click           后台 PostMessage 点击客户区坐标          [S4]");
         sb.AppendLine("  e2e             MockGame 端到端闭环(任务栏→按钮→状态)   [S4]");
         sb.AppendLine("  report          真机验证向导                              [S4]");
