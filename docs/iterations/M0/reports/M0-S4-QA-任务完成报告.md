@@ -4,6 +4,7 @@
 - **iter/m0 commit(本轮前)**:`e451968`(S3 RJ-S3-01/02 复测)
 - **iter/m0 commit(本轮首报)**:`1bf06d5`(滚动合并 dev-a/m0-s4 + dev-b/m0-s4 + PostMessageDriver 接缝适配 + S4 UT + 桌面走查手册)
 - **iter/m0 commit(本轮复测 / RJ-S4-01/02)**:`24d83ce`(滚动合并 dev-a/m0-s4 RJ-S4-01 + RJ-S4-02 坐标推导接缝 UT)
+- **iter/m0 commit(本轮复测 / RJ-S4-03)**:`13eaef9`(滚动合并 dev-a/m0-s4 RJ-S4-03 + RJ-S4-03 接缝 UT 谓词语义独立验证)
 - **关键参考**:
   - `docs/iterations/M0/reports/M0-S3-架构师审核报告-终审.md`(S3 终审 PASS)
   - `docs/iterations/M0/sprints/M0-S4-M0收口与端到端闭环.md`
@@ -20,6 +21,8 @@
 | `1bf06d5` | qa | `qa(s4): S4 QA 任务完成 — 26 新增 UT + 桌面走查手册 + 报告` |
 | `91cc9f0` | merge | `qa: 滚动合并 dev-a/m0-s4 RJ-S4-01(E2eCommand 坐标空间混用修复 + 3 个实现侧 UT)` |
 | `24d83ce` | qa | `qa(s4): RJ-S4-01/02 复测 — DEF-S4-01 闭环;坐标推导接缝独立验证 UT 13 用例 + 报告增补` |
+| `d5287f2` | merge | `qa: 滚动合并 dev-a/m0-s4 RJ-S4-03(E2eCommand 状态轮询谓词修正 + 3 个实现侧 UT)` |
+| `13eaef9` | qa | `qa(s4): RJ-S4-03 复测 — 谓词语义接缝独立验证 UT + 报告增补` |
 
 ## 集成记录
 
@@ -160,6 +163,83 @@
 
 ---
 
+## RJ-S4-03 复测(S4 架构师审核第二轮 — DEF-S4-02 闭环)
+
+> 背景:S4 架构师审核第二轮(报告 `527a388`)。架构师真机观测确认 DEF-S4-01 闭环:
+> taskbar score=1.0 @ (264,90),点击坐标换算正确,**PostMessage 点击驱动 MockGame 状态机
+> 转移成功(Idle→Pathfinding 首次真机观测)** — M0 核心架构问题完全闭环。
+> 新发现 **DEF-S4-02**:e2e 状态轮询谓词笔误(架构师已认领修正文档),原 `PollStateToPhase`
+> 等待 Pathfinding **或** Arrived,导致寻路 2s 内(363ms)立即截屏匹配 mock_btn_return,
+> 此时按钮仍为"前往",匹配 score=0.3818 失败。
+> 阻塞缺陷仅 DEF-S4-02,极小改动:RJ-S4-03(Dev A)谓词改为仅 `state == Arrived`,
+> 路径中间态(Pathfinding)不算终止。
+
+### RJ-S4-03 修复内容(commit `6eed8fb`,Dev A 极小改动)
+
+- `PollStateToPhase` 签名 `expectedA+expectedB` → `expectedState`(单参数);内联 `CheckStateMatch`。
+- `E2eCommand.Execute` step 7 调用 `PollStateToPhase(statePath, 'Arrived', ...)` 单一目标相位。
+- 错误日志:`state.json did not reach Pathfinding/Arrived within 5s` → `... Arrived within 5s`。
+- 成功日志:`[e2e] state observed: {observedState}` → `[e2e] state observed: Arrived`(字面常量)。
+- `PollStateToPhase` 由 `private static` → `internal static`(供 `DH2.Tests` 调写验证)。
+- 3 个实现侧 UT(`E2ePollStateToPhaseTests`):
+  - `PathfindingOnly_DoesNotTerminate_ReturnsNull`(中间态不截止)
+  - `IdleOnly_DoesNotTerminate_ReturnsNull`(Idle 不算终止)
+  - `PathfindingThenArrived_ReturnsArrived`(切换 ≤1s 内返回)
+- 验证:`dotnet build` 0/0 + `dotnet test` 140/140 + `dotnet format --verify-no-changes` exit 0。
+
+### RJ-S4-03 谓词语义接缝独立验证 UT(测试 Agent,本轮新增)
+
+> 防御 e2e 状态轮询谓词漂移(DEF-S4-02 类教训);与 Dev A 实现侧 UT 在不同文件
+> 互为独立验证:
+> - Dev A 测"实现" —— 断言 Pathfinding/Idle 不截止、Pathfinding→Arrived 切换 ≤1s;
+> - QA 接缝测"接缝" —— 精确字面量匹配 + 防御(取消/文件不存在/空文件/非法 JSON/缺 state 字段)
+>   + 大小写敏感 + 多档间隔 + 极速切换 + 全状态机循环。
+
+文件:`tests/DH2.Tests/Unit/Commands/E2ePollStateToPhaseBehaviorTests.cs`(11 用例):
+
+| 用例 | 锁定契约 |
+|---|---|
+| `PollStateToPhase_StateIsExactMatch_NotPrefixOrSubstring` | state="Arrived Extra" 不应匹配 "Arrived"(字面量匹配,非前缀/包含) |
+| `PollStateToPhase_AlreadyAtTarget_TerminatesImmediately` | state 一开始就在 expectedState → 立即返回,耗时 < 200ms |
+| `PollStateToPhase_TargetIdle_StaysPathfinding_DoesNotMatch` | target=Idle,state=Pathfinding → null(谓词严格,不是默认匹配) |
+| `PollStateToPhase_TargetPathfinding_StaysArrived_DoesNotMatch` | target=Pathfinding,state=Arrived → null(Pathfinding 不是终态) |
+| `PollStateToPhase_CancellationRequested_ThrowsOperationCanceledException` | ct.Cancel() → 抛 `OperationCanceledException`(实际 TaskCanceledException,继承自 OCE) |
+| `PollStateToPhase_FileNotExists_KeepsPollingUntilTimeout` | 文件不存在 → 持续轮询直到 timeout,返 null(不抛) |
+| `PollStateToPhase_EmptyFile_KeepsPollingUntilTimeout` | 文件存在但为空 → 持续轮询直到 timeout(防御 JSON 解析异常) |
+| `PollStateToPhase_InvalidJson_KeepsPollingUntilTimeout` | 非法 JSON → 持续轮询直到 timeout |
+| `PollStateToPhase_StateJsonMissingStateField_KeepsPollingUntilTimeout` | 合法 JSON 但缺 state 字段 → 持续轮询直到 timeout |
+| `PollStateToPhase_FullIdlePathfindingArrived_ReturnsArrived` | 完整 MockGame 状态循环 Idle → Pathfinding → Arrived,200ms 内切换,总耗时 < 800ms |
+| `PollStateToPhase_FastTransitionWithinInterval_Detects` | 极速切换:50ms 切换 + 10ms 间隔,total < 300ms |
+| `PollStateToPhase_StateIsLowercaseArrived_DoesNotMatch` | state="arrived"(小写)不应匹配 expectedState="Arrived"(大小写敏感) |
+
+### RJ-S4-03 复测结果
+
+| 项 | 结果 |
+|---|---|
+| `dotnet build DH2.slnx -c Release` | ✅ **0 警告 0 错误** |
+| `dotnet test DH2.slnx -c Release --no-build` | ✅ **152/152 通过**(原 140 + Dev A 3 RJ-S4-03 + QA 11 RJ-S4-03 接缝 UT = 152;含既有 121 跨 S1-S3 累计回归) |
+| `dotnet format DH2.slnx --verify-no-changes` | ✅ exit 0 |
+| **RJ-S4-03 接缝 UT 全 PASS** | ✅ 11/11 PASS — 验证谓词字面量匹配 + 中间态不截止 + 取消/文件异常/大小写敏感 + 全状态机循环 |
+| **Dev A 3 个 RJ-S4-03 实现侧 UT** | ✅ 3/3 PASS |
+| **既有 S1-S4 累计 140 用例** | ✅ 全部仍 PASS(无回归) |
+
+**结论**:`e2e` 状态轮询谓词修正已闭环,Pathfinding 不截止、Arrived 截止语义严格落地;
+架构师真机重跑 e2e 即可 PASS(到达 Arrived 时截屏匹配 mock_btn_return → score ≥ 阈值)。
+
+### RJ-S4-03 接缝 UT 设计要点
+
+- **物理隔离**:QA 接缝 UT 在独立文件 `E2ePollStateToPhaseBehaviorTests.cs`,
+  与 Dev A 实现侧 `E2ePollStateToPhaseTests` 物理分离 — 任一端再漂移都会被对应层捕获。
+- **谓词语义扩展覆盖**:Dev A 的 3 个实现侧 UT 覆盖基本路径(Pathfinding/Idle 不截止、Pathfinding→Arrived 切换),
+  QA 接缝 UT 扩展覆盖字面量匹配(非前缀/包含)、取消异常、文件异常(不存在/空/非法 JSON/缺字段)、
+  大小写敏感、多档间隔(10ms 极速 + 50ms 标准)、全状态机循环。
+- **状态机防御**:`PollStateToPhase_StateIsLowercaseArrived_DoesNotMatch` 锁死 MockGame 状态字面值大小写契约,
+  防止未来某次 MockGame 改造引入小写状态名导致 e2e 静默失败。
+- **取消异常类型**:`TaskCanceledException : OperationCanceledException`,
+  `Assert.ThrowsAny<OperationCanceledException>` 接受子类(避免过严断言)。
+
+---
+
 ## SAC1-3 闭环判定(S2 终审裁定条件)
 
 > S2 架构师第三轮终审报告:IT-04/05 通过即视为 S1 遗留 SAC1-3 闭环。
@@ -194,6 +274,7 @@ IT-04/05/06 真机端到端部分(click + state.json 转移 + raw 日志 + count
 | DEF | 标题 | 处置 | 结果 |
 |---|---|---|---|
 | DEF-S4-01 | `e2e` 命令点击坐标推导物理/逻辑空间混用(@150% DPI 下 MockGame 接收端按物理÷1.5 转 DIP,直接投递逻辑坐标 (86,204) 实际落点 (57,136),偏出按钮区域 y≥180 之外 44 DIP) | RJ-S4-01(`7da3b8d`,Dev A) + RJ-S4-02(本轮 QA 接缝独立验证) | ✅ **CLOSED** |
+| DEF-S4-02 | `e2e` 状态轮询谓词笔误(原 PollStateToPhase 等待 Pathfinding **或** Arrived,导致寻路 2s 内立即截屏匹配 mock_btn_return,此时按钮仍为"前往",匹配 score=0.3818 失败) | RJ-S4-03(`6eed8fb`,Dev A 极小改动) + RJ-S4-03 接缝独立验证(本轮 QA) | ✅ **CLOSED** |
 
 ### S3 遗留(本轮关闭)
 
@@ -250,4 +331,4 @@ IT-04/05/06 真机端到端部分(click + state.json 转移 + raw 日志 + count
 
 ---
 
-**声明(第二轮/RJ-S4-01/02 复测):QA 已完成 M0-S4 名下全部 Story(集成 dev-a/m0-s4 + dev-b/m0-s4 + S4 集成接缝修复 + IT-07 异常防御 24 UT + 桌面走查手册 + SAC1-3 闭环判定 + RJ-S4-02 坐标推导接缝独立验证 13 UT),iter/m0 HEAD `24d83ce`,`dotnet build` 0 警 0 错,`dotnet test` 137/137 通过,`dotnet format --verify-no-changes` exit 0。DEF-S4-01 已 CLOSED(RJ-S4-01 + RJ-S4-02 联合验证)。Dev A / Dev B / QA 三份任务完成报告齐备,SAC1-3 闭环待架构师在桌面走查手册签字栏签字 + e2e 真机重跑后即视为 M0 整体收口;等待架构师 M0 终审 + 启动 M1a 的指令。**
+**声明(第三轮/RJ-S4-03 复测):QA 已完成 M0-S4 名下全部 Story(集成 dev-a/m0-s4 + dev-b/m0-s4 + S4 集成接缝修复 + IT-07 异常防御 24 UT + 桌面走查手册 + SAC1-3 闭环判定 + RJ-S4-02 坐标推导接缝独立验证 13 UT + RJ-S4-03 谓词语义接缝独立验证 11 UT),iter/m0 HEAD `13eaef9`,`dotnet build` 0 警 0 错,`dotnet test` 152/152 通过,`dotnet format --verify-no-changes` exit 0。DEF-S4-01 + DEF-S4-02 已 CLOSED(RJ-S4-01 + RJ-S4-02 联合验证 / RJ-S4-03 + QA 接缝验证)。Dev A / Dev B / QA 三份任务完成报告齐备,SAC1-3 闭环待架构师在桌面走查手册签字栏签字 + e2e 真机终验(谓词修正后 mock_btn_return 匹配 score 应 ≥ 阈值)后即视为 M0 整体收口;等待架构师 M0 终审 + 启动 M1a 的指令。**
