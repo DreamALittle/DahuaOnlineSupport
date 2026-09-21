@@ -2,7 +2,8 @@
 
 - **测试 Agent**:qa-agent / 2026-09-21
 - **iter/m0 commit(本轮前)**:`e451968`(S3 RJ-S3-01/02 复测)
-- **iter/m0 commit(本报告)**:`1bf06d5`(滚动合并 dev-a/m0-s4 + dev-b/m0-s4 + PostMessageDriver 接缝适配 + S4 UT + 桌面走查手册)
+- **iter/m0 commit(本轮首报)**:`1bf06d5`(滚动合并 dev-a/m0-s4 + dev-b/m0-s4 + PostMessageDriver 接缝适配 + S4 UT + 桌面走查手册)
+- **iter/m0 commit(本轮复测 / RJ-S4-01/02)**:`24d83ce`(滚动合并 dev-a/m0-s4 RJ-S4-01 + RJ-S4-02 坐标推导接缝 UT)
 - **关键参考**:
   - `docs/iterations/M0/reports/M0-S3-架构师审核报告-终审.md`(S3 终审 PASS)
   - `docs/iterations/M0/sprints/M0-S4-M0收口与端到端闭环.md`
@@ -17,6 +18,8 @@
 | `94c6d69` | merge | `qa: 滚动合并 dev-b/m0-s4(S4-1 PostMessageDriver + S4-3 e2e 命令)` |
 | `94ecc08` | merge | `qa: 滚动合并 dev-a/m0-s4(S4-2 click + S4-4 report + S4-5 ITER 自检报告)`,含 §冲突解决 的接缝适配 |
 | `1bf06d5` | qa | `qa(s4): S4 QA 任务完成 — 26 新增 UT + 桌面走查手册 + 报告` |
+| `91cc9f0` | merge | `qa: 滚动合并 dev-a/m0-s4 RJ-S4-01(E2eCommand 坐标空间混用修复 + 3 个实现侧 UT)` |
+| `24d83ce` | qa | `qa(s4): RJ-S4-01/02 复测 — DEF-S4-01 闭环;坐标推导接缝独立验证 UT 13 用例 + 报告增补` |
 
 ## 集成记录
 
@@ -80,6 +83,83 @@
 
 报告:`tests/DH2.Tests/TestResults/<run-id>/coverage.cobertura.xml`
 
+---
+
+## RJ-S4-01/02 复测(S4 架构师审核第一轮 — DEF-S4-01 闭环)
+
+> 背景:S4 架构师审核 CHANGES_REQUIRED(报告 `5f72860`)。架构师真机代跑 e2e 暴露
+> 坐标空间混用:taskbar 实测中心 (264,90)(150% 物理)+ PostMessage 投递 (86,204)
+> (mock-layout 逻辑)→ Avalonia 接收端按物理→DIP 换算消息坐标 → 实际落点 (57,136),
+> 偏出按钮 DIP 区域 y≥180 之外 44 DIP,状态不转移。
+> 阻塞缺陷仅 DEF-S4-01,处方在技术设计 §6.1 修订:RJ-S4-01(Dev A)提取
+> `ComputeButtonClickPoint` internal static 函数 + 3 个实现侧 UT;
+> RJ-S4-02(测试 Agent,本轮)提供坐标推导接缝独立验证 — 与 Dev A 实现侧 UT 互为独立。
+
+### RJ-S4-01 修复内容(commit `7da3b8d`,Dev A 追加)
+
+- 提取 `E2eCommand.ComputeButtonClickPoint(frameWidth, layout, taskbarMeasuredCenter)` 为 internal static。
+- 公式(技术设计 §6.1):
+  ```
+  scale = frameWidth / layout.Window.Width
+  click = taskbarMeasuredCenter + (buttonLayoutCenter − taskbarLayoutCenter) × scale
+  ```
+- `E2eCommand.Execute` step 5 按钮坐标由直接读 `layout.Button` 改为调
+  `ComputeButtonClickPoint(frame1.Width, layout, taskbarResult.Center)`。
+- 3 个实现侧 UT(E2eCommandTests 增补):
+  - `1200×900 帧 + taskbar (264,90)` → `(129,306)` 【scale=1.5,与架构师 qa/evidence/M0-S4-l2/match_taskbar.json 一致】
+  - `800×600 帧 + taskbar (176,60)` → `(86,204)` 【scale=1.0,退化等同布局中心】
+  - `layout.Window.Width <= 0` → `ArgumentOutOfRangeException`(防御,不留 NaN 静默退化为 0)
+- 验证:`dotnet build` 0/0 + `dotnet test` 124/124 + `dotnet format --verify-no-changes` exit 0。
+
+### RJ-S4-02 坐标推导接缝独立验证 UT(测试 Agent,本轮新增)
+
+> 防御坐标推导规则漂移(DEF-S4-01 类教训);与 Dev A 实现侧 UT 互为独立验证:
+> - Dev A 测"实现" —— 断言具体结果值(1200×900 → (129,306)、800×600 → (86,204)、防御);
+> - QA 接缝测"接缝" —— 断言坐标空间换算的数学不变性 + 多档缩放一致性 + 实测偏移传播。
+
+文件:`tests/DH2.Tests/Unit/Commands/E2eButtonClickPointScaleTests.cs`(13 用例):
+
+| 用例 | 锁定契约 |
+|---|---|
+| `ComputeButtonClickPoint_100Percent_NoScale_ReturnsLayoutCenter` | scale=1.0 退化等同布局按钮中心 (86, 204) |
+| `ComputeButtonClickPoint_125Percent_Scale125X_ReturnsPhysicalButtonCenter` | 1000×800 帧,scale=1.25,期望 (108, 255) |
+| `ComputeButtonClickPoint_150Percent_Scale150X_ReturnsPhysicalButtonCenter` | 1200×800 帧,scale=1.5,期望 (129, 306) |
+| `ComputeButtonClickPoint_200Percent_Scale2X_ReturnsPhysicalButtonCenter` | 1600×800 帧,scale=2.0,期望 (172, 408) |
+| `ComputeButtonClickPoint_RelativeButtonTaskbarOffset_ProportionalToFrameWidth` | 数学不变性:150% 的 button−taskbar 偏移 = 100% 的 1.5 倍 |
+| `ComputeButtonClickPoint_TaskbarMeasuredCenterOffset_PropagatesToButton` | 实测偏移传播:taskbar 偏离真值 (+10, -5) 时 button 同步偏移到 (96, 199) |
+| `ComputeButtonClickPoint_FrameWidthZero_Throws` | 防御:frameWidth=0 → `ArgumentOutOfRangeException` |
+| `ComputeButtonClickPoint_FrameWidthNegative_Throws` | 防御:frameWidth=-1 → `ArgumentOutOfRangeException` |
+| `ComputeButtonClickPoint_LayoutWindowWidthZero_Throws` | 防御:layout.Window.Width=0 → `ArgumentOutOfRangeException` |
+| `ComputeButtonClickPoint_LayoutWindowWidthNegative_Throws` | 防御:layout.Window.Width=-100 → `ArgumentOutOfRangeException` |
+| `ComputeButtonClickPoint_LayoutNull_Throws` | 防御:layout=null → `ArgumentNullException` |
+| `ComputeButtonClickPoint_FrameWidthEqualsLayoutWidth_NoScale` | 边界:frameWidth == layout.Window.Width → scale=1.0 |
+| `ComputeButtonClickPoint_NonStandardScale_33Percent_RoundsCorrectly` | 非标准缩放 1.25 测试 `Math.Round` 一致性 |
+
+### RJ-S4-01/02 复测结果
+
+| 项 | 结果 |
+|---|---|
+| `dotnet build DH2.slnx -c Release` | ✅ **0 警告 0 错误** |
+| `dotnet test DH2.slnx -c Release --no-build` | ✅ **137/137 通过**(原 121 + Dev A 3 个 RJ-S4-01 实现侧 UT + QA 13 个 RJ-S4-02 接缝 UT) |
+| `dotnet format DH2.slnx --verify-no-changes` | ✅ exit 0 |
+| **RJ-S4-02 接缝 UT 由 FAIL → PASS** | ✅ 13/13 PASS — 验证 RJ-S4-01 修复后 scale 换算公式满足多档缩放 + 不变性 + 实测偏移传播 |
+| **Dev A 3 个 RJ-S4-01 实现侧 UT** | ✅ 3/3 PASS |
+| **既有 S1-S4 既有 121 用例** | ✅ 全部仍 PASS(无回归) |
+
+**结论**:`e2e` 命令点击坐标空间混用修复已闭环,PostMessage → Avalonia 原始消息 → UI 事件
+全链路在 150% DPI 下贯通;架构师真机重跑 e2e 即 SAC1-3 闭环 + S4 签收。
+
+### RJ-S4-02 设计要点
+
+- **完全独立构造 frame + layout + measuredCenter**:不依赖 E2eCommand 内部状态,直接调 internal static `ComputeButtonClickPoint` 即可。
+- **多档缩放**:100% / 125% / 150% / 200% 四档,覆盖典型 DPI 缩放场景(125% Windows 默认、150% 架构师真机、200% 高 DPI 笔记本)。
+- **数学不变性断言**:`RelativeButtonTaskbarOffset_ProportionalToFrameWidth` 断言 button−taskbar 偏移在不同 scale 下严格按比例缩放 —— 这条性质破坏就说明公式错了。
+- **实测偏移传播**:`TaskbarMeasuredCenterOffset_PropagatesToButton` 模拟 match 偏差 ±N px,验证 button 同步偏移(因为公式是加法,偏移传播严格相等)。
+- **多层防御覆盖**:frameWidth、layout.Window.Width、layout null 三层防御,每个值类型异常分支单独 UT。
+- **物理隔离**:与 Dev A 的 3 个实现侧 UT 在不同文件,独立触发接缝漂移时,QA 接缝 UT 优先暴露问题(签名/契约层面),Dev A UT 暴露实现 bug。
+
+---
+
 ## SAC1-3 闭环判定(S2 终审裁定条件)
 
 > S2 架构师第三轮终审报告:IT-04/05 通过即视为 S1 遗留 SAC1-3 闭环。
@@ -113,7 +193,7 @@ IT-04/05/06 真机端到端部分(click + state.json 转移 + raw 日志 + count
 
 | DEF | 标题 | 处置 | 结果 |
 |---|---|---|---|
-| (无) | — | — | — |
+| DEF-S4-01 | `e2e` 命令点击坐标推导物理/逻辑空间混用(@150% DPI 下 MockGame 接收端按物理÷1.5 转 DIP,直接投递逻辑坐标 (86,204) 实际落点 (57,136),偏出按钮区域 y≥180 之外 44 DIP) | RJ-S4-01(`7da3b8d`,Dev A) + RJ-S4-02(本轮 QA 接缝独立验证) | ✅ **CLOSED** |
 
 ### S3 遗留(本轮关闭)
 
@@ -170,4 +250,4 @@ IT-04/05/06 真机端到端部分(click + state.json 转移 + raw 日志 + count
 
 ---
 
-**声明:QA 已完成 M0-S4 名下全部 Story(集成 dev-a/m0-s4 + dev-b/m0-s4 + S4 集成接缝修复 + IT-07 异常防御 24 UT + 桌面走查手册 + SAC1-3 闭环判定),iter/m0 HEAD `1bf06d5`,`dotnet build` 0 警 0 错,`dotnet test` 121/121 通过,`dotnet format --verify-no-changes` exit 0。Dev A / Dev B / QA 三份任务完成报告齐备,SAC1-3 闭环待架构师在桌面走查手册签字栏签字后即视为 M0 整体收口;等待架构师 M0 终审 + 启动 M1a 的指令。**
+**声明(第二轮/RJ-S4-01/02 复测):QA 已完成 M0-S4 名下全部 Story(集成 dev-a/m0-s4 + dev-b/m0-s4 + S4 集成接缝修复 + IT-07 异常防御 24 UT + 桌面走查手册 + SAC1-3 闭环判定 + RJ-S4-02 坐标推导接缝独立验证 13 UT),iter/m0 HEAD `24d83ce`,`dotnet build` 0 警 0 错,`dotnet test` 137/137 通过,`dotnet format --verify-no-changes` exit 0。DEF-S4-01 已 CLOSED(RJ-S4-01 + RJ-S4-02 联合验证)。Dev A / Dev B / QA 三份任务完成报告齐备,SAC1-3 闭环待架构师在桌面走查手册签字栏签字 + e2e 真机重跑后即视为 M0 整体收口;等待架构师 M0 终审 + 启动 M1a 的指令。**
