@@ -5,6 +5,7 @@ using DH2.Capture;
 using DH2.Core.Config;
 using DH2.Core.Contracts;
 using DH2.Core.Models;
+using DH2.Core.Util;
 using DH2.Input;
 using DH2.Vision;
 using OpenCvSharp;
@@ -312,30 +313,26 @@ public sealed class E2eCommand : IDh2Command
             return false;
         }
 
-        // 等 ≤3s 至 Idle(允许 MockGame 刚启动未写盘)
-        var sw = Stopwatch.StartNew();
-        while (sw.ElapsedMilliseconds < EnsureIdleTimeoutMs)
+        // 等 ≤3s 至 Idle(允许 MockGame 刚启动未写盘);用 Polling.WaitUntilAsync 而非散落 Thread.Sleep(04 §3)
+        try
         {
-            string? state;
-            try
+            var ok = Polling.WaitUntilAsync(
+                () => Task.FromResult(SafeReadState(statePath) == "Idle"),
+                intervalMs: EnsureIdleIntervalMs,
+                timeoutMs: EnsureIdleTimeoutMs,
+                ct: CancellationToken.None).GetAwaiter().GetResult();
+            if (!ok)
             {
-                state = TryReadState(statePath);
-            }
-            catch
-            {
-                state = null;
-            }
-
-            if (state == "Idle")
-            {
-                return true;
+                error = $"state.json 未在 {EnsureIdleTimeoutMs}ms 内到达 Idle(当前或不可读)";
             }
 
-            Thread.Sleep(EnsureIdleIntervalMs);
+            return ok;
         }
-
-        error = $"state.json 未在 {EnsureIdleTimeoutMs}ms 内到达 Idle(当前或不可读)";
-        return false;
+        catch (Exception ex)
+        {
+            error = $"EnsureIdle 异常: {ex.Message}";
+            return false;
+        }
     }
 
     private static string? PollStateToPhase(
@@ -346,39 +343,43 @@ public sealed class E2eCommand : IDh2Command
         int intervalMs,
         CancellationToken ct)
     {
-        var sw = Stopwatch.StartNew();
-        while (sw.ElapsedMilliseconds < timeoutMs)
+        // 用 Polling.WaitUntilAsync 而非散落 Thread.Sleep(04 §3);sync-over-async 是 IDh2Command.Execute
+        // 同步签名所迫,与现有 CaptureCommand 的 Task.Delay.GetAwaiter().GetResult() 一致。
+        var reached = Polling.WaitUntilAsync(
+            () => Task.FromResult(CheckStateMatch(statePath, expectedA, expectedB)),
+            intervalMs: intervalMs,
+            timeoutMs: timeoutMs,
+            ct: ct).GetAwaiter().GetResult();
+
+        if (!reached)
         {
-            ct.ThrowIfCancellationRequested();
-
-            string? state = null;
-            try
-            {
-                state = TryReadState(statePath);
-            }
-            catch
-            {
-                // JSON 中间态(原子写过程)忽略
-            }
-
-            if (state == expectedA || state == expectedB)
-            {
-                return state;
-            }
-
-            Thread.Sleep(intervalMs);
+            return null;
         }
 
-        return null;
+        return SafeReadState(statePath);
     }
 
-    private static string? TryReadState(string path)
+    private static bool CheckStateMatch(string statePath, string a, string b)
     {
-        var json = File.ReadAllText(path);
-        using var doc = JsonDocument.Parse(json);
-        return doc.RootElement.TryGetProperty("state", out var stateProp)
-            ? stateProp.GetString()
-            : null;
+        var s = SafeReadState(statePath);
+        return s == a || s == b;
+    }
+
+    private static string? SafeReadState(string path)
+    {
+        try
+        {
+            var json = File.ReadAllText(path);
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.TryGetProperty("state", out var stateProp)
+                ? stateProp.GetString()
+                : null;
+        }
+        catch
+        {
+            // JSON 中间态(原子写过程)或 IO 抖动 → 返回 null,调用方视为"未满足"
+            return null;
+        }
     }
 
     private static void WriteMatchJson(string dir, string name, MatchResult result)
