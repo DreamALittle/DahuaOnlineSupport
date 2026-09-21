@@ -1,0 +1,14 @@
+hwnd=7211574
+=== dh2ctl click(甯х┖闂?129,306)===
+{"success":true,"attempts":1,"failReason":""}
+click exit=0
+state={"state":"Arrived","counter":0,"ts":"2026-09-21T22:06:11.8975751Z"}
+=== 閲嶅瓨 mock_btn_return ===
+{"saved":true,"key":"mock_btn_return","file":"png/mock_btn_return.png","threshold":0.85,"size":[210,72]}
+btn_return.png 涓績鍍忕礌: R=252 G=252 B=251 (鏈熸湜鈮?5,91,255)
+璧勪骇鏂█閫氳繃
+=== 瀹堟姢 UT 澶嶈窇 ===
+=== e2e 缁堥獙 ===
+[23:06:18 INF] Loading config from configs/dev.yaml
+[e2e error] EnsureIdle failed: state.json 未在 3000ms 内到达 Idle(当前或不可读)
+e2e exit=3
