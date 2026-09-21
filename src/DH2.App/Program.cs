@@ -121,6 +121,8 @@ internal static class Program
             "capture" => new CaptureCommand(),
             "save-template" => new SaveTemplateCommand(),
             "match" => new MatchCommand(),
+            "click" => new ClickCommand(),
+            "report" => new ReportCommand(),
             _ => null,
         };
 
@@ -151,9 +153,9 @@ internal static class Program
         Console.Error.WriteLine("  capture      capture N frames of a window            [S2-4 ✓]");
         Console.Error.WriteLine("  save-template 截屏裁剪入库 + manifest 登记          [S3-3 ✓]");
         Console.Error.WriteLine("  match         在最新截屏上定位模板                  [S3-3 ✓]");
-        Console.Error.WriteLine("  click         (S4)");
-        Console.Error.WriteLine("  e2e           (S4)");
-        Console.Error.WriteLine("  report        (S4)");
+        Console.Error.WriteLine("  click         后台 PostMessage 点击客户区          [S4-2 ✓]");
+        Console.Error.WriteLine("  e2e           MockGame 端到端闭环(任务栏→按钮→状态) [S4-3, Dev B]");
+        Console.Error.WriteLine("  report        真机验证向导(V1~V6)                  [S4-4 ✓]");
         Console.Error.WriteLine($"Default --config: {CommandParser.DefaultConfigPath}");
         Console.Error.WriteLine("Use --help to print full help.");
     }
