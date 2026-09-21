@@ -32,7 +32,8 @@
                    FontSize="18" />
 
         <!-- 主按钮 -->
-        <Button Canvas.Left="{Binding ButtonX}"
+        <Button x:Name="MainButton"
+                Canvas.Left="{Binding ButtonX}"
                 Canvas.Top="{Binding ButtonY}"
                 Width="{Binding ButtonWidth}"
                 Height="{Binding ButtonHeight}"
