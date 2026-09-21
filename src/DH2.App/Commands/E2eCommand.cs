@@ -224,11 +224,11 @@ public sealed class E2eCommand : IDh2Command
                 return (int)ExitCode.ConfigOrExecutionFailure;
             }
 
-            // ---- step 7: 状态轮询(Pathfinding/Arrived,≤5s,§6.1)----
+            // ---- step 7: 状态轮询(Arrived,≤5s,§6.1;RJ-S4-03 谓词修正:Pathfinding 只是中间态)----
             string? observedState;
             try
             {
-                observedState = PollStateToPhase(statePath, "Pathfinding", "Arrived", StatePollTimeoutMs, StatePollIntervalMs, ct);
+                observedState = PollStateToPhase(statePath, "Arrived", StatePollTimeoutMs, StatePollIntervalMs, ct);
             }
             catch (OperationCanceledException)
             {
@@ -238,14 +238,14 @@ public sealed class E2eCommand : IDh2Command
 
             if (observedState is null)
             {
-                Console.Error.WriteLine("[e2e FAIL] state.json did not reach Pathfinding/Arrived within 5s");
+                Console.Error.WriteLine("[e2e FAIL] state.json did not reach Arrived within 5s");
                 WriteArtifactState(e2eDir, "state_after_poll_fail.json", statePath);
                 swTotal.Stop();
                 Console.WriteLine($"E2E: FAIL  steps=2/{3}  elapsed={swTotal.Elapsed.TotalMilliseconds:F0}ms  evidence={Path.GetFullPath(e2eDir)}");
                 return (int)ExitCode.ConfigOrExecutionFailure;
             }
 
-            Console.WriteLine($"[e2e] state observed: {observedState}");
+            Console.WriteLine("[e2e] state observed: Arrived");
 
             // ---- step 8: 二次 capture + match mock_btn_return ----
             Frame frame2;
@@ -339,18 +339,31 @@ public sealed class E2eCommand : IDh2Command
         }
     }
 
-    private static string? PollStateToPhase(
+    /// <summary>
+    /// 轮询 MockGame state.json 至 <paramref name="expectedState"/>(单一目标相位,RJ-S4-03)。
+    /// </summary>
+    /// <remarks>
+    /// RJ-S4-02 测试 Agent 的 13 个坐标推导接缝 UT 已覆盖 <see cref="ComputeButtonClickPoint"/>;本方法
+    /// 谓词语义(Pathfinding 不截止、Arrived 截止)由 <c>DH2.Tests.E2ePollStateToPhaseTests</c> 独立验证。
+    /// </remarks>
+    /// <param name="statePath">state.json 绝对路径(MockGame 临时目录下)。</param>
+    /// <param name="expectedState">目标相位名(<c>"Arrived"</c>)——中间态(<c>"Pathfinding"</c>)不算终止。</param>
+    /// <param name="timeoutMs">总超时(毫秒)。</param>
+    /// <param name="intervalMs">两次轮询间隔(毫秒)。</param>
+    /// <param name="ct">外部取消令牌。</param>
+    /// <returns>达到 <paramref name="expectedState"/> 时返回当前 state 字符串;超时返回 <c>null</c>。取消抛 <see cref="OperationCanceledException"/>。</returns>
+    internal static string? PollStateToPhase(
         string statePath,
-        string expectedA,
-        string expectedB,
+        string expectedState,
         int timeoutMs,
         int intervalMs,
         CancellationToken ct)
     {
         // 用 Polling.WaitUntilAsync 而非散落 Thread.Sleep(04 §3);sync-over-async 是 IDh2Command.Execute
         // 同步签名所迫,与现有 CaptureCommand 的 Task.Delay.GetAwaiter().GetResult() 一致。
+        // RJ-S4-03:仅匹配 expectedState(单一目标相位);Pathfinding 等中间态不算终止条件。
         var reached = Polling.WaitUntilAsync(
-            () => Task.FromResult(CheckStateMatch(statePath, expectedA, expectedB)),
+            () => Task.FromResult(SafeReadState(statePath) == expectedState),
             intervalMs: intervalMs,
             timeoutMs: timeoutMs,
             ct: ct).GetAwaiter().GetResult();
@@ -361,12 +374,6 @@ public sealed class E2eCommand : IDh2Command
         }
 
         return SafeReadState(statePath);
-    }
-
-    private static bool CheckStateMatch(string statePath, string a, string b)
-    {
-        var s = SafeReadState(statePath);
-        return s == a || s == b;
     }
 
     private static string? SafeReadState(string path)
