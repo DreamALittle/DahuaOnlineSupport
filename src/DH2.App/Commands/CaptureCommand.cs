@@ -48,12 +48,39 @@ public sealed class CaptureCommand : IDh2Command
             return (int)ExitCode.UsageError;
         }
 
-        var count = options.TryGetValue("count", out var countStr) && int.TryParse(countStr, out var c) && c > 0
-            ? c
-            : DefaultCount;
-        var intervalMs = options.TryGetValue("interval-ms", out var ivStr) && int.TryParse(ivStr, out var iv) && iv >= 0
-            ? iv
-            : DefaultIntervalMs;
+        // RJ-S2-04: --count 与 --interval-ms 非法值不再静默回退默认值,
+        // 而是与 --hwnd 一致报 usage error 并退出码 2。
+        var count = DefaultCount;
+        if (options.TryGetValue("count", out var countStr))
+        {
+            if (!int.TryParse(countStr, out var c))
+            {
+                Console.Error.WriteLine($"[usage error] --count must be an integer; got '{countStr}'");
+                return (int)ExitCode.UsageError;
+            }
+            if (c <= 0)
+            {
+                Console.Error.WriteLine($"[usage error] --count must be >= 1; got {c}");
+                return (int)ExitCode.UsageError;
+            }
+            count = c;
+        }
+
+        var intervalMs = DefaultIntervalMs;
+        if (options.TryGetValue("interval-ms", out var ivStr))
+        {
+            if (!int.TryParse(ivStr, out var iv))
+            {
+                Console.Error.WriteLine($"[usage error] --interval-ms must be an integer; got '{ivStr}'");
+                return (int)ExitCode.UsageError;
+            }
+            if (iv < 0)
+            {
+                Console.Error.WriteLine($"[usage error] --interval-ms must be >= 0; got {iv}");
+                return (int)ExitCode.UsageError;
+            }
+            intervalMs = iv;
+        }
 
         var outDir = options.TryGetValue("out", out var outStr) && !string.IsNullOrWhiteSpace(outStr)
             ? outStr
