@@ -2,7 +2,8 @@
 
 - **测试 Agent**:qa-agent / 2026-09-21
 - **iter/m0 commit(本轮前)**:`6d5c4d4`(S2 终审 PASS + S3 放行同步)
-- **iter/m0 commit(本报告)**:`7d586e9`(滚动合并 dev-a + dev-b S3 推送)
+- **iter/m0 commit(本轮首报 / S3 三报齐备声明)**:`3da68cb`(滚动合并 dev-a + dev-b S3 推送)
+- **iter/m0 commit(本轮复测 / RJ-S3-01/02)**:`cb7868e`(滚动合并 dev-a/m0-s4 + RJ-S3-02 接缝 UT + 报告增补)
 - **关键参考**:
   - `docs/iterations/M0/reports/M0-S2-架构师审核报告-第三轮终审.md`(PASS + RJ-S2-04 折叠指令)
   - `docs/iterations/M0/sprints/M0-S3-模板匹配与模板库.md`
@@ -16,6 +17,7 @@
 |---|---|---|
 | `origin/dev-b/m0-s3` (`02b08ac`) | `git merge --no-ff` → `02b08ac` | 零(S3-1 TemplateStore + S3-2 TemplateMatcher;无产品侧冲突) |
 | `origin/dev-a/m0-s3` (`85f9d06`) | `git merge --no-ff` → `7d586e9` | 零(RJ-S2-04 + S3-3 save-template/match;Dev A 已本地集成 Dev B,QA 滚动合并无冲突) |
+| `origin/dev-a/m0-s4` (`8088fab`) | `git merge --no-ff` → `cb7868e` | 零(RJ-S3-01 manifest 序列化 PascalCase→camelCase 修复 + ManifestWriter 提取为 internal 类 + 4 个 ManifestWriter 合规回归 UT;DH2.App.csproj 加 `[InternalsVisibleTo DH2.Tests]`) |
 
 集成后 iter/m0 HEAD 包含全部 S3 提交,IT-03 时序条件满足(Dev A 命令 + Dev B Store/Matcher 双方均已合入)。
 
@@ -127,6 +129,73 @@
 | `match --hwnd 12345` | usage error + 退出码 2 | `[usage error] --key <name> required (non-empty)` + 退出码 2 | ✅ |
 | `match --hwnd 12345 --key nonexistent` | TemplateStore init 失败 + 退出码 3 | `[match error] TemplateStore init failed: manifest.yaml 未找到: ...` + 退出码 3 | ✅ 配置文件不存在正确报错 |
 
+---
+
+## RJ-S3-01/02 复测(S3 架构师审核第二轮 — DEF-S3-01 闭环)
+
+> 背景:S3 架构师审核 CHANGES_REQUIRED(报告 `f02e6c0`)。架构师已代跑完真机资产生成
+> 与 IT-03 走查(三模板 PNG + gold-idle 入库;mock_btn_return 在 Arrived 态重存修正;
+> 150% 物理系数在 manifest 文件头已标注;DEF-S2-01/02 复测仍为 PASS)。
+> 阻塞缺陷仅 DEF-S3-01(manifest 写读 schema 大小写接缝断裂),由 RJ-S3-01(Dev A)
+> + RJ-S3-02(测试 Agent)联合修复。
+
+### RJ-S3-01 修复内容(commit `8088fab`,Dev A S4 首笔提交)
+
+- `SaveTemplateCommand.ManifestWriter` 嵌套私有类 → 提升为顶层 internal 类
+  (`src/DH2.App/Commands/ManifestWriter.cs`),**YAML 序列化器显式绑定**
+  `CamelCaseNamingConvention`(对齐技术设计 §5.1 + `DH2.Vision.TemplateManifestParser` 读端 camelCase)。
+- `DH2.App.csproj` 加 `[InternalsVisibleTo("DH2.Tests")]` → 回归 UT 可直接调
+  `ManifestWriter.UpsertEntry` 走完整写路径。
+- `SaveTemplateCommand` 改用新 `ManifestWriter.UpsertEntry` 调用点。
+- Dev A 自带 4 个 writer 合规回归 UT:
+  `tests/DH2.Tests/Unit/Commands/ManifestWriterRegressionTests.cs`:
+  - `UpsertEntry_WritesCamelCaseProfile_NotPascalCase`(锁死 §5.1 schema)
+  - `UpsertEntry_GeneratesDashKeyPrefix`(锁死 `- key:` 形式)
+  - `UpsertEntry_IsIdempotent_SameKeyReplacedNotAppended`
+  - `UpsertEntry_AppendsMultipleKeys_KeepsAllEntries`
+- 验证:`dotnet build -c Release` 0 警 0 错 + `dotnet test` 92/92 全绿 + `dotnet format --verify-no-changes` exit 0。
+
+### RJ-S3-02 接缝集成 UT(测试 Agent,本轮新增)
+
+> 防御 save-template 写端与 TemplateStore 读端 schema 漂移(DEF-S3-01 类教训);
+> 真实回环测试:SaveTemplateCommand 写临时目录 manifest + PNG →
+> TemplateStore 从该文件加载 → Get("mock_taskbar") 返有效条目。
+> 同时断言写出的 manifest 文本遵循技术设计 §5.1 camelCase schema(锁死 §5.1)。
+
+文件:`tests/DH2.Tests/Unit/Vision/SaveTemplateStoreRoundtripTests.cs`(3 用例):
+
+| 用例 | 锁定契约 |
+|---|---|
+| `SaveTemplate_WriteManifest_TemplateStoreCanReadBack` | SaveTemplateCommand 全链路写入 → manifest 文本含 `profile:` / `- key:` / `threshold:` / `clickOffset:` / `x: 0` / `y: 0` / `roi:` / `since:`(均 camelCase)+ PascalCase `Profile:` / `- Key:` / `Threshold:` / `ClickOffset:` 全部不存在 + PNG 落盘 + TemplateStore 加载该 manifest → `Get("mock_taskbar")` 返 `key/file/threshold` 正确 + `Image.Cols=320/Rows=88` |
+| `SaveTemplate_Reload_PicksUpNewEntryInSameStoreLifetime` | 写入后全新 `TemplateStore` 实例(模拟进程重启)→ 单条目可见 |
+| `SaveTemplate_Twice_IdempotentAndPreservesOldEntry` | 不同 key 并存(2 条目)+ 同 key 二次写(位置变化)→ 仍 2 条目(mock_btn_go 被替换,非追加),`Image.Cols/Rows` 反映新 ROI |
+
+### RJ-S3-01/02 复测结果
+
+| 项 | 结果 |
+|---|---|
+| `dotnet build DH2.slnx -c Release` | ✅ **0 警告 0 错误** |
+| `dotnet test DH2.slnx -c Release --no-build` | ✅ **95/95 通过**(原 88 + Dev A 4 个 ManifestWriterRegressionTests + QA 3 个 RJ-S3-02 接缝 UT) |
+| `dotnet format DH2.slnx --verify-no-changes` | ✅ exit 0 |
+| **RJ-S3-02 接缝 UT 由 FAIL → PASS** | ✅ 3/3 PASS — 说明 RJ-S3-01 修复后 writer 端输出已对齐 §5.1 schema,reader 端 TemplateStore 可正常加载 |
+| **Dev A 4 个 ManifestWriter 合规 UT** | ✅ 4/4 PASS — 直接验证 `ManifestWriter.UpsertEntry` 文本遵循 camelCase |
+| **既有 S3-3 命令层** | ✅ save-template/match 缺参/错参/无效窗口路径全部正确退出码(无回归) |
+| **S2 既有 64 用例 + S3 既有 24 用例** | ✅ 全部仍 PASS(无回归) |
+
+**结论**:`save-template` ↔ `TemplateStore` 全链路贯通,DEF-S3-01 已 CLOSED。
+
+### RJ-S3-02 设计要点
+
+- **Mock IFrameCapture**:返同一张合成 Mat 的 `Clone()`(深拷贝,SaveTemplateCommand 释放其 Image 时不影响源);**不调用真 GDI**,headless 可执行。
+- **DevConfig 注入**:`Paths.Templates = tempRoot`(动态路径,不污染仓库 `templates/mock_800x600/`)+ `Matching.DefaultThreshold = 0.85`。
+- **接缝断言 vs 合规断言分层**:
+  - **Dev A 4 个合规 UT**:直接调 `ManifestWriter.UpsertEntry` → 验证文本格式(轻量、快速)
+  - **QA 3 个接缝 UT**:经 `SaveTemplateCommand.Execute` 全链路 → 验证 `TemplateStore` 端到端可加载(端到端、慢、权威)
+- 两层互补:Dev A 测"写端契约",QA 测"端到端接缝契约"。任一端再漂移都会被对应层捕获。
+- **复用基础设施**:与 S2-1 capture Mat 生命周期修复同模式 —— RJ-S3-02 同样捕获"接缝漂移"类签名,与 S2 DEF-S2-01/02 形成完整防御网。
+
+---
+
 ## L2 待回填说明(headless 限制)
 
 ### S3-4 资产生成(INFRA PASS / RUN PENDING)
@@ -156,7 +225,7 @@ IT-03 范围:`dh2ctl match mock_taskbar` 断言中心误差 ≤2px(真机 MockGa
 
 | DEF | 标题 | 处置 | 结果 |
 |---|---|---|---|
-| (无) | — | — | — |
+| DEF-S3-01 | `save-template` 写 manifest YAML 使用 YamlDotNet 默认 PascalCase,与 TemplateStore 读取端 camelCase schema 不一致,save→match 全链路断裂 | RJ-S3-01(`8088fab`,Dev A S4 首笔提交) | ✅ **CLOSED** |
 
 ### S2 遗留(本轮关闭)
 
@@ -208,4 +277,4 @@ $ mavis cron delete --cron_name M0-S3-dev-push-watch
 
 ---
 
-**声明:QA 已完成 M0-S3 名下全部 Story(UT-03/05/07 + IT-03 命令层 + RJ-S2-04 复测 + S3-4 桌面走查手册),iter/m0 HEAD `7d586e9`,`dotnet build` 0 警 0 错,`dotnet test` 88/88 通过,`dotnet format --verify-no-changes` exit 0。Dev A / Dev B / QA 三份任务完成报告齐备,等待架构师 M0-S3 收口审查 + S4 e2e 放行指令。**
+**声明(第二轮/RJ-S3-01/02 复测):QA 已完成 M0-S3 名下全部 Story(UT-03/05/07 + IT-03 命令层 + RJ-S2-04 复测 + S3-4 桌面走查手册 + RJ-S3-02 接缝集成 UT + RJ-S3-01/02 复测),iter/m0 HEAD `cb7868e`(滚动合并 dev-a/m0-s4),`dotnet build` 0 警 0 错,`dotnet test` 95/95 通过(原 88 + Dev A 4 ManifestWriter 合规 UT + QA 3 RJ-S3-02 接缝 UT),`dotnet format --verify-no-changes` exit 0。DEF-S3-01 已 CLOSED(RJ-S3-01)。Dev A / Dev B / QA 三份任务完成报告齐备,等待架构师 M0-S3 终审 + S4 e2e 放行指令。**
