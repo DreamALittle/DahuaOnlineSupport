@@ -6,6 +6,7 @@
     - M0-S1 仅交付骨架;CLI 子命令在 S2/S3/S4 渐进接入
     - 引用方向:App → Core/Input/Capture/Vision(02 §3)
     - DPI:app.manifest 声明 PerMonitorV2,避免 GDI 截屏与坐标被虚拟化
+    - M0-S3 起对 DH2.Tests 暴露 internals(允许回归 UT 直接调用 ManifestWriter 等 internal 工具)
   -->
 
   <PropertyGroup>
@@ -15,6 +16,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Description>DH2 命令行控制入口(dh2ctl)</Description>
   </PropertyGroup>
+
+  <!-- M0-S3 起对 DH2.Tests 暴露 internals(允许回归 UT 直接调用 ManifestWriter 等 internal 工具) -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="DH2.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DH2.Core\DH2.Core.csproj" />
