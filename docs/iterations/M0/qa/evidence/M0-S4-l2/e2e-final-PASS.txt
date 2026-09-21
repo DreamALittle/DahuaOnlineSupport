@@ -1,0 +1,9 @@
+=== M0 出口终验: dh2ctl e2e --target mock ===
+[18:46:09 INF] Loading config from configs/dev.yaml
+[e2e] taskbar found at center=(264,90) score=1.0000
+[e2e] state observed: Arrived
+[e2e FAIL] mock_btn_return not found (score=0.3818); UI ״̬�밴ťδһ��
+E2E: FAIL  steps=2/3  elapsed=2425ms  evidence=D:\Repos\DH2\artifacts\e2e-20260921174609
+exit=3
+=== state 终�?===
+{"state":"Arrived","counter":0,"ts":"2026-09-21T17:46:11.6161494Z"}
