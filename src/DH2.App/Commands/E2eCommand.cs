@@ -17,14 +17,14 @@ namespace DH2.App.Commands;
 /// <c>dh2ctl e2e --target mock</c> —— MockGame 端到端自动化闭环(技术设计 §6.1 + S4-3)。
 /// </summary>
 /// <remarks>
-/// <para>步骤(技术设计 §6.1,S4-3 加 EnsureIdle 前置):</para>
+/// <para>步骤(技术设计 §6.1,S4-3 加 EnsureIdle 前置,RJ-S4-01 修点击坐标推导):</para>
 /// <list type="number">
 ///   <item>EnsureIdle — 轮询 MockGame state.json 至 <c>Idle</c>(≤3s),失败则 FAIL;</item>
 ///   <item>enumerate — 按 <c>--target</c> 找到 <c>configs/dev.yaml</c> 中对应 WindowTargetConfig,<c>Enumerate</c> 必须恰好 1 个窗口;</item>
 ///   <item>capture — 取首帧,落 <c>artifacts/e2e-{ts}/frame_before.png</c>;</item>
 ///   <item>match <c>mock_taskbar</c> — 任务栏定位;Found=false 直接 FAIL(连同证据 JSON);</item>
-///   <item>几何计算 — 从 <c>configs/mock-layout.yaml</c> 读按钮矩形 → 客户区中心;</item>
-///   <item>click — <c>PostMessageDriver.ClickAsync</c> 客户区坐标(DIP==像素 @100%);</item>
+///   <item>几何计算 — 由 taskbar 实测中心 + (按钮布局中心 − 任务栏布局中心) × scale 推导按钮帧坐标(RJ-S4-01);</item>
+///   <item>click — <c>PostMessageDriver.ClickAsync</c> 帧像素坐标(@100% 等同 DIP,@150% 按物理像素投递,Avalonia 接收端自动按物理→DIP 换算消息坐标);</item>
 ///   <item>状态轮询 — 等 MockGame state.json 转 <c>Pathfinding</c> 或 <c>Arrived</c>(≤5s,§6.1);</item>
 ///   <item>二次 capture + match <c>mock_btn_return</c> — 仅断言 Found=true + Score ≥ 阈值(不做像素中心断言,S3 终审架构约定);</item>
 ///   <item>输出 <c>E2E: PASS|FAIL</c> + 步骤耗时 + 证据目录绝对路径。</item>
@@ -186,10 +186,14 @@ public sealed class E2eCommand : IDh2Command
             Console.WriteLine(
                 $"[e2e] taskbar found at center=({taskbarResult.Center.X},{taskbarResult.Center.Y}) score={taskbarResult.Score:F4}");
 
-            // ---- step 5: 按钮中心(几何来源 = mock-layout.yaml)----
-            var buttonCenter = new DH2Point(
-                layout.Button.X + layout.Button.Width / 2,
-                layout.Button.Y + layout.Button.Height / 2);
+            // ---- step 5: 按钮帧坐标(RJ-S4-01:taskbar 锚点 + scale 推导)----
+            // 公式(技术设计 §6.1):scale = frameWidth / layout.Window.Width;
+            //                     click = taskbarMeasuredCenter + (buttonLayoutCenter − taskbarLayoutCenter) × scale。
+            // 修复前直接把 layout 逻辑坐标当作像素投递,@150% 下 Avalonia 按物理→DIP 换算导致命中 y<180 之外。
+            var buttonCenter = ComputeButtonClickPoint(
+                frameWidth: frame1.Width,
+                layout: layout,
+                taskbarMeasuredCenter: taskbarResult.Center);
 
             // ---- step 6: click ----
             var driver = _driverFactory is null
@@ -415,5 +419,60 @@ public sealed class E2eCommand : IDh2Command
         {
             Console.Error.WriteLine($"[e2e warn] copy {name} failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// 计算按钮的客户区点击坐标(帧像素空间,RJ-S4-01 / 技术设计 §6.1)。
+    /// </summary>
+    /// <remarks>
+    /// <para>公式:<c>scale = frameWidth / layout.Window.Width</c>;点击 = taskbar 实测中心 + (按钮布局中心 − 任务栏布局中心) × scale。</para>
+    /// <para>解决 150% DPI 下的坐标空间混用:PostMessage 投递的 (x, y) 由 Avalonia 接收端按物理像素÷缩放系数换算为 DIP;
+    /// 若直接用 layout 逻辑坐标 @150% 等同于落点缩到 (x/1.5, y/1.5) DIP,偏出按钮区域。</para>
+    /// <para>taskbar 在 layout 中有明确的矩形锚点;以其为参考系把按钮位置先在布局空间算出偏移,
+    /// 再乘 scale 投到帧像素空间,加上 taskbar 实测中心即得按钮帧坐标。</para>
+    /// <para>由 <c>DH2.Tests</c> 直接调写验证(RJ-S4-01 坐标推导 UT):</para>
+    /// <list type="bullet">
+    ///   <item>1200×900 帧 + taskbar 实测 (264, 90) → (129, 306)【scale=1.5】</item>
+    ///   <item>800×600 帧 + taskbar 实测 (176, 60) → (86, 204)【scale=1.0,退化等同布局中心】</item>
+    /// </list>
+    /// </remarks>
+    /// <param name="frameWidth">当前帧像素宽度(取自 <see cref="Frame.Width"/>,构造期缓存,Dispose 后仍可读)。</param>
+    /// <param name="layout">MockGame 布局单一真源(<c>configs/mock-layout.yaml</c>)。</param>
+    /// <param name="taskbarMeasuredCenter">任务栏实测命中中心(帧像素空间,来自 <see cref="MatchResult.Center"/>)。</param>
+    /// <returns>按钮的帧像素坐标。</returns>
+    internal static DH2Point ComputeButtonClickPoint(
+        int frameWidth,
+        MockLayoutConfig layout,
+        DH2Point taskbarMeasuredCenter)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        if (frameWidth <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(frameWidth), frameWidth, "frameWidth 必须 > 0");
+        }
+
+        if (layout.Window.Width <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                "layout.Window.Width",
+                layout.Window.Width,
+                "layout.Window.Width 必须 > 0");
+        }
+
+        var scale = (double)frameWidth / layout.Window.Width;
+
+        var buttonLayoutCenter = new DH2Point(
+            layout.Button.X + layout.Button.Width / 2,
+            layout.Button.Y + layout.Button.Height / 2);
+        var taskbarLayoutCenter = new DH2Point(
+            layout.Taskbar.X + layout.Taskbar.Width / 2,
+            layout.Taskbar.Y + layout.Taskbar.Height / 2);
+
+        var dx = (buttonLayoutCenter.X - taskbarLayoutCenter.X) * scale;
+        var dy = (buttonLayoutCenter.Y - taskbarLayoutCenter.Y) * scale;
+
+        return new DH2Point(
+            (int)Math.Round(taskbarMeasuredCenter.X + dx),
+            (int)Math.Round(taskbarMeasuredCenter.Y + dy));
     }
 }
